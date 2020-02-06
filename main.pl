@@ -31,24 +31,21 @@ my $population = &generate_genes();
 
 for (my $i = 0; $i < $iterations; $i++) {
 
-  # map of images, key is index in $population
+  # Create images from population
+  # returns a map of images, key is index in $population
   my $images = &create_images($population);
 
   # get indices of best genes in population arref
   my $best_indices = &get_best_gene_indices($images, $SOURCE_IMAGE_FILENAME);
+
+  # Prep the next generation of genes
   my @best_genes = @{$population}[@$best_indices];
-
-  # get an array of mutants
   my $mutants = &mutate_population(\@best_genes);
-
-  # get an array of kids
   my $children = &mate_population(\@best_genes);
-
-
-  # prep for next round
   $population = [ @best_genes, @$children, @$mutants];
 
-  # output status for user
+  # --------------------------------------------------
+  # Output status for user
   my $b_pop = scalar @best_genes;
   my $m_pop = scalar @$mutants;
   my $c_pop = scalar @$children;
@@ -57,6 +54,8 @@ for (my $i = 0; $i < $iterations; $i++) {
   print "Best distance from this round: $best_distance\n";
 
 
+  # --------------------------------------------------
+  # Save the best image and corresponding gene
   my $best_image_so_far = $images->{$best_indices->[0]};
   &save_image($best_image_so_far, "image_$i.png");
   &save_gene(
