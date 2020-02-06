@@ -17,9 +17,9 @@ use Genes qw/
   &set_max_population
   &generate_genes
   &create_images
-  &get_comparisons_to_source
+  &get_comparisons_to_target
   &get_best_gene_indices
-  &get_best_distance
+  &set_best_distance
   &mutate_population
   &mate_population
   &save_image
@@ -45,31 +45,31 @@ EOM
 
 # --------------------------------------------------
 # Go through commandline options
-my $source_image_filename = undef;
+my $target_image_filename = undef;
 my $seed_file = undef;
 my $iterations = 10;
 my $pool = 10;
 my $help;
 
 GetOptions(
-  "target-file=s" => \$source_image_filename,
+  "target-file=s" => \$target_image_filename,
   "seed=s"       => \$seed_file,
   "iterations=i" => \$iterations,
   "pool=i"       => \$pool,
   "help"         => \$help,
   ) or die ("bad commandline args\n");
 
-if (! $source_image_filename or $help ) {
+if (! $target_image_filename or $help ) {
   print $helptext;
   exit 0;
 }
 # --------------------------------------------------
 
-
 # Create an array of genes
 &set_max_population($pool);
-my $population = &generate_genes();
+my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
+my $prev_best_distance = 1;
 for (my $i = 0; $i < $iterations; $i++) {
 
   # Create images from population
@@ -77,7 +77,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   my $images = &create_images($population);
 
   # get indices of best genes in population arref
-  my $best_indices = &get_best_gene_indices($images, $source_image_filename);
+  my $best_indices = &get_best_gene_indices($images, $target_image_filename);
 
   # Prep the next generation of genes
   my @best_genes = @{$population}[@$best_indices];
@@ -85,21 +85,28 @@ for (my $i = 0; $i < $iterations; $i++) {
   my $children = &mate_population(\@best_genes);
   $population = [ @best_genes, @$children, @$mutants];
 
+
+
+
   # --------------------------------------------------
   # Output status for user
   my $b_pop = scalar @best_genes;
   my $m_pop = scalar @$mutants;
   my $c_pop = scalar @$children;
-  my $best_distance = &get_best_distance();
+  my $best_distance = &set_best_distance();
+  my $distance_diff = $prev_best_distance - $best_distance;
   print "Round $i:\tSurvivors($b_pop) Children($c_pop) Mutants($m_pop)\n";
-  print "Best distance from this round: $best_distance\n";
+  print "Best distance: $best_distance\t(diff: $distance_diff)\n";
 
 
   # --------------------------------------------------
   # Save the best image and corresponding gene
   my $best_image_so_far = $images->{$best_indices->[0]};
-  &save_image($best_image_so_far, "image_$i.png");
+  mkdir "$$" unless ( -d "$$" );
+  &save_image($best_image_so_far, "$$/image_$i.png");
   &save_gene(
-    { distance => $best_distance, gene => \@{$best_genes[0]} },
-    "gene_$i.txt");
+    { distance => $best_distance,
+      gene => \@{$best_genes[0]},
+    },
+    "$$/gene_$i.txt");
 }

@@ -10,20 +10,20 @@ use strict;
 
 use Exporter qw(import);
 our @EXPORT_OK = qw/
+  &set_best_distance
   &set_debug
-  &set_max_population
   &set_gene_start_length
-  &set_survival_percent
-  &set_mutate_percent
-  &set_mate_percent
-  &set_max_radius
   &set_image_dimensions
+  &set_mate_percent
+  &set_max_population
+  &set_max_radius
+  &set_mutate_percent
+  &set_survival_percent
 
   &generate_genes
   &create_images
-  &get_comparisons_to_source
+  &get_comparisons_to_target
   &get_best_gene_indices
-  &get_best_distance
 
   &mate_population
   &mate_genes
@@ -43,19 +43,21 @@ use Data::Dumper;
 my $DEBUG = 'TRUE';
 
 my $MAX_POPULATION = 50;
-my $GENE_START_LENGTH = 30;
+my $GENE_START_LENGTH = 50;
 my $SURVIVAL_PERCENT = 0.2;
-my $MATE_PERCENT = 0.6;
-my $MUTATE_PERCENT = 0.2;
+my $MATE_PERCENT = 0.4;
+my $MUTATE_PERCENT = 0.4;
 my ($WIDTH, $HEIGHT) = (600, 600);
 my $WIDTHXHEIGHT = $WIDTH . 'x' . $HEIGHT;
-my $MAX_RADIUS = 255;
-my $BEST_DISTANCE = -1;
+my $MAX_RADIUS = 200;
+my $MIN_RADIUS = 2;
+
+my $BEST_DISTANCE = undef;
 
 # --------------------------------------------------
-# subs
+# Subs
 
-sub get_best_distance()     { return $BEST_DISTANCE;                                  }
+sub set_best_distance()     { $BEST_DISTANCE     = shift || return $BEST_DISTANCE     }
 sub set_debug()             { $DEBUG             = shift || return $DEBUG             }
 sub set_max_population()    { $MAX_POPULATION    = shift || return $MAX_POPULATION    }
 sub set_gene_start_length() { $GENE_START_LENGTH = shift || return $GENE_START_LENGTH }
@@ -76,7 +78,7 @@ sub mutate_population() {
 
   for (my $i = 0; $i < $number_of_mutants; $i++) {
     my $gene = @$population[int(rand(scalar @$population))];
-    push @mutants, mutate_gene($gene);
+    push @mutants, &mutate_gene($gene);
   }
 
   return \@mutants;
@@ -88,8 +90,9 @@ sub mutate_gene() {
   my $ran = int(rand(scalar @$gene)); # index of a random allele
   my $allele = &generate_allele;
 
-  splice(@$gene, $ran, 1, $allele);
-  return $gene;
+  my @newgene = map { $_ } @$gene; 
+  splice(@newgene, $ran, 1, $allele);
+  return \@newgene;
 }
 
 
@@ -101,7 +104,7 @@ sub mate_population() {
   for (my $i = 0; $i < $number_of_children; $i++) {
     my $gene1 = @$population[int(rand(scalar @$population))];
     my $gene2 = @$population[int(rand(scalar @$population))];
-    push @children, mate_genes($gene1, $gene2);
+    push @children, &mate_genes($gene1, $gene2);
   }
 
   return \@children;
@@ -126,12 +129,12 @@ sub drint() {
 }
 
 
-sub load_source_image() {
-  my $source_image_filename = shift;
-  my $source_image = Image::Magick->new;
+sub load_target_image() {
+  my $target_image_filename = shift;
+  my $target_image = Image::Magick->new;
 
-  $source_image->ReadImage($source_image_filename);
-  return $source_image;
+  $target_image->ReadImage($target_image_filename);
+  return $target_image;
 }
 
 
@@ -139,7 +142,7 @@ sub load_source_image() {
 sub generate_allele() {
   my $x = int(rand($WIDTH));
   my $y = int(rand($HEIGHT));
-  my $r = int(rand($MAX_RADIUS));
+  my $r = $MIN_RADIUS + int(rand($MAX_RADIUS - $MIN_RADIUS));
 
   return [
     $x,
@@ -151,7 +154,44 @@ sub generate_allele() {
     ];
 }
 
-sub generate_genes() {
+
+sub generate_genes () {
+  my $seed_file = shift;
+
+  if ($seed_file) {
+    return &generate_genes_from_seed($seed_file);
+  }
+  return &generate_genes_from_scratch();
+}
+
+sub generate_genes_from_seed() {
+  my $seed_filename = shift;
+
+  print "Loading file '$seed_filename'.\n";
+  open (my $FH, '<', $seed_filename) or die "cant open $seed_filename: $!";
+  my $rawdata = join '', <$FH>;
+  close $FH;
+
+  my $VAR1; # Data::Dumper saves the serialized data into this ref, so
+            # we need to declare it
+  eval $rawdata;
+  die $! if $@;
+
+  my $seed_gene = $VAR1->{'gene'};
+  my $seed_distance = $VAR1->{'distance'};
+
+  print "Gene loaded. Gene has distance '$seed_distance' to image.\n";
+  print "Creating " . ($MAX_POPULATION - 1) . " mutations of the seed.\n";
+
+  my $population;
+  push @$population, $seed_gene;
+  for (my $i = 1; $i < $MAX_POPULATION; $i++) {
+    push @$population, &mutate_gene($seed_gene);
+  }
+  return $population;
+}
+
+sub generate_genes_from_scratch() {
   my $population;
 
   for (my $i = 0; $i < $MAX_POPULATION; $i++) {
@@ -209,7 +249,6 @@ sub create_image() {
       my ($xr, $yr) = ($x, $y + $rad);
       $drawing->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $xr,$yr");
     }
-    #&save_image($drawing);
    return $drawing;
 }
 
@@ -229,13 +268,13 @@ sub create_images() {
 
 sub get_best_gene_indices () {
   my $images = shift;
-  my $source_filename = shift;
+  my $target_filename = shift;
   my $distance_map;
 
-  my $source = &load_source_image($source_filename);
+  my $target = &load_target_image($target_filename);
 
   foreach my $index (keys %$images) {
-    my $result = $source->Compare(image=>$images->{$index}, metric=>'mae');
+    my $result = $target->Compare(image=>$images->{$index}, metric=>'mae');
     my $diff = $result->Get('error');
     $distance_map->{$diff} = $index;
 
@@ -245,7 +284,7 @@ sub get_best_gene_indices () {
   my @distances_sorted = sort keys %{$distance_map};
   my $cut_off_index = int ($MAX_POPULATION * $SURVIVAL_PERCENT) - 1;
   my @best_matches = @distances_sorted[0.. $cut_off_index];
-  $BEST_DISTANCE = $best_matches[0];
+  &set_best_distance($best_matches[0]);
 
   my @indices;
   foreach my $distance (@best_matches) {
