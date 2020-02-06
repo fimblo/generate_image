@@ -1,8 +1,15 @@
 #!/usr/bin/perl
+# --------------------------------------------------
+# This script generates an image.. blah blah
+#
+# Mattias Jansson <fimblo@yanson.org>
+# --------------------------------------------------
+
 use v5.28.1;
 use warnings;
 use strict;
-use Data::Dumper;
+use Getopt::Long;
+use File::Basename;
 
 BEGIN { push @INC, 'lib/'}
 
@@ -18,12 +25,46 @@ use Genes qw/
   &save_image
   &save_gene
   /;
+
+# --------------------------------------------------
+# Help message
+my $basename = basename($0);
+my $helptext = << "EOM";
+Generate an image which, over generations, approximates target image.
+
+Usage: $basename -t <target-file> [-h -s <seed> -i <iter> -p <pool>]
+
+       -t <target-file>  # image to approximate
+
+Optional params
+       -s <seed>         # start first iteration with this seed file.
+       -i <iter>         # number of iterations. (default 10)
+       -p <pool>         # size of gene pool. (default 10)
+       -h                # This help message
+EOM
+
+# --------------------------------------------------
+# Go through commandline options
+my $source_image_filename = undef;
+my $seed_file = undef;
+my $iterations = 10;
+my $pool = 10;
+my $help;
+
+GetOptions(
+  "target-file=s" => \$source_image_filename,
+  "seed=s"       => \$seed_file,
+  "iterations=i" => \$iterations,
+  "pool=i"       => \$pool,
+  "help"         => \$help,
+  ) or die ("bad commandline args\n");
+
+if (! $source_image_filename or $help ) {
+  print $helptext;
+  exit 0;
+}
 # --------------------------------------------------
 
-
-my $SOURCE_IMAGE_FILENAME = 'anna.png';
-my $iterations = 1;
-my $pool = 10;
 
 # Create an array of genes
 &set_max_population($pool);
@@ -36,7 +77,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   my $images = &create_images($population);
 
   # get indices of best genes in population arref
-  my $best_indices = &get_best_gene_indices($images, $SOURCE_IMAGE_FILENAME);
+  my $best_indices = &get_best_gene_indices($images, $source_image_filename);
 
   # Prep the next generation of genes
   my @best_genes = @{$population}[@$best_indices];
