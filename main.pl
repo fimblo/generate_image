@@ -14,6 +14,7 @@ use File::Basename;
 BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
+  &set_gene_start_length
   &set_max_population
   &set_max_radius
   &set_min_radius
@@ -45,7 +46,7 @@ my $helptext = << "EOM";
   -s <seed>         # start first iteration with this seed file.
   -i <iter>         # number of iterations. (default 10)
   -r <ratio>        # population ratio for next generation.
-  # Survivor:Children:Mutants (default 2:4:4)
+                    # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
   -h                # This help message
 EOM
@@ -56,7 +57,7 @@ my $target_image_filename = undef;
 my $seed_file = undef;
 my $iterations = 10;
 my $pool = 10;
-my $ratio = "2:4:4";
+my $ratio = "1:2:1";
 my $help;
 
 GetOptions(
@@ -94,7 +95,7 @@ my $tot = $s+$c+$m;
 &set_max_population($pool);
 &set_min_radius(300);
 &set_max_radius(500);
-
+&set_gene_start_length(10);
 
 # Create an array of genes
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
@@ -217,8 +218,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   &save_image($best_image_so_far, "$$/image_$i.png");
   &save_gene(
     { distance => $best_distance,
-      gene => \@{$best_genes[0]},
-    },
+      gene => \@best_genes },
     "$$/gene_$i.txt");
 }
 
