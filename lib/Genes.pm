@@ -43,7 +43,7 @@ use Data::Dumper;
 
 my $DEBUG = 'TRUE';
 
-my $MAX_POPULATION = 50;
+my $START_POPULATION = 50;
 my $GENE_START_LENGTH = 50;
 my $SURVIVAL_PERCENT = 0.2;
 my $MATE_PERCENT = 0.4;
@@ -60,7 +60,7 @@ my $BEST_DISTANCE = undef;
 
 sub set_best_distance()     { $BEST_DISTANCE     = shift || return $BEST_DISTANCE     }
 sub set_debug()             { $DEBUG             = shift || return $DEBUG             }
-sub set_max_population()    { $MAX_POPULATION    = shift || return $MAX_POPULATION    }
+sub set_max_population()    { $START_POPULATION    = shift || return $START_POPULATION    }
 sub set_gene_start_length() { $GENE_START_LENGTH = shift || return $GENE_START_LENGTH }
 sub set_survival_percent()  { $SURVIVAL_PERCENT  = shift || return $SURVIVAL_PERCENT  }
 sub set_mutate_percent()    { $MUTATE_PERCENT    = shift || return $MUTATE_PERCENT    }
@@ -75,7 +75,7 @@ sub set_image_dimensions() {
 
 sub mutate_population() {
   my $population = shift;
-  my $number_of_mutants = int($MAX_POPULATION * $MUTATE_PERCENT);
+  my $number_of_mutants = shift || int($START_POPULATION * $MUTATE_PERCENT);
   my @mutants;
 
   for (my $i = 0; $i < $number_of_mutants; $i++) {
@@ -111,7 +111,7 @@ sub mutate_gene() {
 
 sub mate_population() {
   my $population = shift;
-  my $number_of_children = int($MAX_POPULATION * $MATE_PERCENT);
+  my $number_of_children = int($START_POPULATION * $MATE_PERCENT);
   my @children;
 
   for (my $i = 0; $i < $number_of_children; $i++) {
@@ -205,24 +205,23 @@ sub generate_genes_from_seed() {
   eval $rawdata;
   die $! if $@;
 
-  my $seed_gene = $VAR1->{'gene'};
+  my $population    = $VAR1->{'gene'};
   my $seed_distance = $VAR1->{'distance'};
+  my $size = scalar @$population;
 
-  print "Gene loaded. Gene has distance '$seed_distance' to image.\n";
-  print "Creating " . ($MAX_POPULATION - 1) . " mutations of the seed.\n";
+  print "$size genes loaded. The best gene has distance '$seed_distance' to image.\n";
+  print "Creating " . ($START_POPULATION - $size) . " mutations of the seed.\n";
 
-  my $population;
-  push @$population, $seed_gene;
-  for (my $i = 1; $i < $MAX_POPULATION; $i++) {
-    push @$population, &mutate_gene($seed_gene);
-  }
+  my $mutants = &mutate_population($population, $START_POPULATION - $size);
+
+  push @$population, @$mutants;
   return $population;
 }
 
 sub generate_genes_from_scratch() {
   my $population;
 
-  for (my $i = 0; $i < $MAX_POPULATION; $i++) {
+  for (my $i = 0; $i < $START_POPULATION; $i++) {
     my $gene_len = $GENE_START_LENGTH;
     my @gene;
     for (my $j = 0; $j < $gene_len; $j++) {
@@ -241,6 +240,7 @@ sub save_gene() {
 
   use Data::Dumper;
   $Data::Dumper::Indent = 0;
+  $Data::Dumper::Purity = 1;
   open(my $OUT, '>', $name) or die "can't save file. $!\n";
   print $OUT Dumper($gene);
   close $OUT;
@@ -310,7 +310,7 @@ sub get_best_gene_indices () {
   }
 
   my @distances_sorted = sort keys %{$distance_map};
-  my $cut_off_index = int ($MAX_POPULATION * $SURVIVAL_PERCENT) - 1;
+  my $cut_off_index = int ($START_POPULATION * $SURVIVAL_PERCENT) - 1;
   my @best_matches = @distances_sorted[0.. $cut_off_index];
   &set_best_distance($best_matches[0]);
 
