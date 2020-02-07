@@ -17,6 +17,7 @@ our @EXPORT_OK = qw/
   &set_mate_percent
   &set_max_population
   &set_max_radius
+  &set_min_radius
   &set_mutate_percent
   &set_survival_percent
 
@@ -65,6 +66,7 @@ sub set_survival_percent()  { $SURVIVAL_PERCENT  = shift || return $SURVIVAL_PER
 sub set_mutate_percent()    { $MUTATE_PERCENT    = shift || return $MUTATE_PERCENT    }
 sub set_mate_percent()      { $MATE_PERCENT      = shift || return $MATE_PERCENT      }
 sub set_max_radius()        { $MAX_RADIUS        = shift || return $MAX_RADIUS        }
+sub set_min_radius()        { $MIN_RADIUS        = shift || return $MIN_RADIUS        }
 sub set_image_dimensions() {
   my ($w, $h) = @_[0,1] || return [$WIDTH, $HEIGHT];
   ($WIDTH, $HEIGHT) = ($w, $h);
@@ -90,8 +92,19 @@ sub mutate_gene() {
   my $ran = int(rand(scalar @$gene)); # index of a random allele
   my $allele = &generate_allele;
 
-  my @newgene = map { $_ } @$gene; 
-  splice(@newgene, $ran, 1, $allele);
+  # add, modify, or remove an allele
+  my @newgene = map { $_ } @$gene;
+  my $selection = int(rand(3));
+  if ($selection == 0) {        # add a new allele
+    push @newgene, $allele;
+  }
+  elsif ($selection == 1) {     # remove a allele
+    splice(@newgene, $ran, 1);
+  }
+  else {                        # modify an existing allele
+    splice(@newgene, $ran, 1, $allele);
+  }
+
   return &dedup_gene(\@newgene);
 }
 
