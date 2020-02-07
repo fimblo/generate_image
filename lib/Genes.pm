@@ -2,7 +2,7 @@
 # --------------------------------------------------
 # Package stuff
 package Genes;
-$VERSION = v.0.0.1;
+$VERSION = v0.0.1;
 
 use v5.28.1;
 use warnings;
