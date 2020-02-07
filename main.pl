@@ -92,8 +92,8 @@ my $tot = $s+$c+$m;
 &set_mate_percent($c/$tot);
 &set_mutate_percent($m/$tot);
 &set_max_population($pool);
-&set_min_radius(100);
-&set_max_radius(400);
+&set_min_radius(300);
+&set_max_radius(500);
 
 
 # Create an array of genes
@@ -101,6 +101,14 @@ my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
 my $prev_best_distance = 1;
 my $distance_counter = 0;
+my $radius_counter = 0;
+my $zombie = 0;
+my $DISTANCE_DIFF_THRESHOLD_XL = 0.001;
+my $DISTANCE_DIFF_THRESHOLD_L  = 0.0001;
+my $DISTANCE_DIFF_THRESHOLD_M  = 0.00001;
+my $DISTANCE_DIFF_THRESHOLD_S  = 0.000001;
+my $distance_threshold = $DISTANCE_DIFF_THRESHOLD_XL;
+
 for (my $i = 0; $i < $iterations; $i++) {
 
   # Create images from population
@@ -114,6 +122,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   my @best_genes = @{$population}[@$best_indices];
   my $mutants = &mutate_population(\@best_genes);
   my $children = &mate_population(\@best_genes);
+  $population = [ @best_genes, @$children, @$mutants];
 
 
 
@@ -135,46 +144,68 @@ for (my $i = 0; $i < $iterations; $i++) {
 
   # --------------------------------------------------
   # If we have no real progress for five rounds, then apply
-  # one of the following strategies:
-  #   1. create a new mutant population using best gene
-  #   2. set radius to small
-  #   3. set radius to medium (default)
-  #   4. set radius to large
+  # one of the following strategies for the next generation.
+  #   - Change radius smaller (looping to big over time)
+  #
   #
   # Exception: if there is a total of less than six rounds
   #            we make no changes to strategy.
-  $distance_counter++ if ($distance_diff < 0.00001);
+  $distance_counter++ if ($distance_diff < $distance_threshold);
 
+  # If zombie mode is on, turn it off after resetting original
+  # survivor/mate/mutate ratios.
+  if ($zombie == 1) {
+    print "====== Zombie mode OFF ======\n";
+    &set_survival_percent($s/$tot);
+    &set_mate_percent($c/$tot);
+    &set_mutate_percent($m/$tot);
+    $zombie = 0;
+  }
+
+  # Check if we want to shake stuff up a bit.
   if ($iterations > 5 and $distance_counter > 4) {
     print "There was no real change for 5 cycles. Shaking things up a bit.\n";
 
-    my $selection = int(rand(3));
-    if ($selection == 0) { # radius small
-      print "Going for small circles...\n";
-      &set_min_radius(4);
-      &set_max_radius(60);
-    }
-    elsif ($selection == 1) { # radius medium
-      print "Going for medium-sized circles...\n";
-      &set_min_radius(50);
-      &set_max_radius(200);
-    }
-    elsif ($selection == 2) { # radius large
-      print "Going for large circles...\n";
+    if ($radius_counter == 0) { # x-large. Go to large
+      print "Changing circle size XL->L\n";
       &set_min_radius(150);
       &set_max_radius(300);
+      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_L;
+    }
+    elsif ($radius_counter == 1) { # large. go to medium
+      print "Changing circle size L->M\n";
+      &set_min_radius(50);
+      &set_max_radius(200);
+      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_M;
+    }
+    elsif ($radius_counter == 2) { # medium. go to small
+      print "Changing circle size M->S\n";
+      &set_min_radius(5);
+      &set_max_radius(50);
+      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_S;
+    }
+    elsif ($radius_counter == 3) { # small. go to XL
+      print "Changing circle size S->XL\n";
+      &set_min_radius(300);
+      &set_max_radius(500);
+      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_XL;
     }
     else {
       die "wtf you shouldn't come here.";
     }
 
-    my $prev = $i-1;
-    $population = &generate_genes("$$/gene_$prev.txt");
+
+    print "====== Zombie mode ON ======\n";
+    &set_survival_percent(0.1);
+    &set_mate_percent(0.01);
+    &set_mutate_percent(0.9);
+    $zombie = 1;
+    
+
+    $radius_counter = ($radius_counter + 1) % 4;
     $distance_counter = 0;
   }
-  else {
-    $population = [ @best_genes, @$children, @$mutants];
-  }
+
   $prev_best_distance = $best_distance;
 
 
