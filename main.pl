@@ -15,6 +15,9 @@ BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
   &set_max_population
+  &set_survival_percent
+  &set_mate_percent
+  &set_mutate_percent
   &generate_genes
   &create_images
   &get_comparisons_to_target
@@ -67,6 +70,9 @@ if (! $target_image_filename or $help ) {
 
 # Create an array of genes
 &set_max_population($pool);
+&set_survival_percent(0.2);
+&set_mate_percent(0.4);
+&set_mutate_percent(0.4);
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
 my $prev_best_distance = 1;
@@ -97,6 +103,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   my $distance_diff = $prev_best_distance - $best_distance;
   print "Round $i:\tSurvivors($b_pop) Children($c_pop) Mutants($m_pop)\n";
   print "Best distance: $best_distance\t(diff: $distance_diff)\n";
+  $prev_best_distance = $best_distance;
 
 
   # --------------------------------------------------

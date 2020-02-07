@@ -49,8 +49,8 @@ my $MATE_PERCENT = 0.4;
 my $MUTATE_PERCENT = 0.4;
 my ($WIDTH, $HEIGHT) = (600, 600);
 my $WIDTHXHEIGHT = $WIDTH . 'x' . $HEIGHT;
-my $MAX_RADIUS = 200;
-my $MIN_RADIUS = 2;
+my $MAX_RADIUS = 100;
+my $MIN_RADIUS = 4;
 
 my $BEST_DISTANCE = undef;
 
