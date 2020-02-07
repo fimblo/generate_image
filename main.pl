@@ -15,6 +15,8 @@ BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
   &set_max_population
+  &set_max_radius
+  &set_min_radius
   &set_survival_percent
   &set_mate_percent
   &set_mutate_percent
@@ -72,8 +74,6 @@ if (! $target_image_filename or $help ) {
 }
 # --------------------------------------------------
 
-&set_max_population($pool);
-
 unless ($ratio =~ m/^(\d+):(\d+):(\d+)$/) {
   print << "EOM";
   Ratio should be specified as three integers separated by colons.
@@ -91,13 +91,16 @@ my $tot = $s+$c+$m;
 &set_survival_percent($s/$tot);
 &set_mate_percent($c/$tot);
 &set_mutate_percent($m/$tot);
+&set_max_population($pool);
+&set_min_radius(100);
+&set_max_radius(400);
 
 
 # Create an array of genes
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
 my $prev_best_distance = 1;
-my $prev_distance_diff = 1;
+my $distance_counter = 0;
 for (my $i = 0; $i < $iterations; $i++) {
 
   # Create images from population
@@ -118,28 +121,62 @@ for (my $i = 0; $i < $iterations; $i++) {
   # --------------------------------------------------
   # Output status for user
   my $best_distance = &set_best_distance();
+  my $min_rad = &set_min_radius();
+  my $max_rad = &set_max_radius();
   my $distance_diff = $prev_best_distance - $best_distance;
   my $b_pop = scalar @best_genes;
   my $m_pop = scalar @$mutants;
   my $c_pop = scalar @$children;
   my ($max, $avg, $stdev) = &get_gene_len_stats(\@best_genes);
   print "Round $i: (S:$b_pop C:$c_pop M:$m_pop) (Gene length Max:$max Avg:$avg StdDev:$stdev)\n";
+  print "Circle Radius (Min: $min_rad) (Max: $max_rad)\n";
   print "Best distance: $best_distance\t(diff: $distance_diff)\n";
 
 
   # --------------------------------------------------
-  # If we have no real progress for two rounds, then repopulate
-  # population using the best 5 genes, all mutants
-  if (($prev_distance_diff + $distance_diff) < 0.0001) {
-    print "There was no real change for two cycles. Shaking things up a bit.\n";
+  # If we have no real progress for five rounds, then apply
+  # one of the following strategies:
+  #   1. create a new mutant population using best gene
+  #   2. set radius to small
+  #   3. set radius to medium (default)
+  #   4. set radius to large
+  #
+  # Exception: if there is a total of less than six rounds
+  #            we make no changes to strategy.
+  $distance_counter++ if ($distance_diff < 0.00001);
+
+  if ($iterations > 5 and $distance_counter > 4) {
+    print "There was no real change for 5 cycles. Shaking things up a bit.\n";
+
+    my $selection = int(rand(3));
+    if ($selection == 0) { # radius small
+      print "Going for small circles...\n";
+      &set_min_radius(4);
+      &set_max_radius(60);
+    }
+    elsif ($selection == 1) { # radius medium
+      print "Going for medium-sized circles...\n";
+      &set_min_radius(50);
+      &set_max_radius(200);
+    }
+    elsif ($selection == 2) { # radius large
+      print "Going for large circles...\n";
+      &set_min_radius(150);
+      &set_max_radius(300);
+    }
+    else {
+      die "wtf you shouldn't come here.";
+    }
+
     my $prev = $i-1;
     $population = &generate_genes("$$/gene_$prev.txt");
+    $distance_counter = 0;
   }
   else {
     $population = [ @best_genes, @$children, @$mutants];
   }
   $prev_best_distance = $best_distance;
-  $prev_distance_diff = $distance_diff;
+
 
 
   # --------------------------------------------------
