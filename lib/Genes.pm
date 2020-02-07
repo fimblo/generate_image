@@ -92,7 +92,7 @@ sub mutate_gene() {
 
   my @newgene = map { $_ } @$gene; 
   splice(@newgene, $ran, 1, $allele);
-  return \@newgene;
+  return &dedup_gene(\@newgene);
 }
 
 
@@ -118,10 +118,25 @@ sub mate_genes() {
   my @last  = @{$gene[1]}[-$ran[1]..-1];
 
   my @child = (@first, @last);
-  #print "$_ " for @child; print "\n";
-  return \@child;
+
+  return &dedup_gene(\@child);
 }
 
+
+sub dedup_gene() {
+  my $gene = shift;
+  my $hash;
+  my @dedup;
+
+  for my $g (@$gene) {
+    my $str = join (',', @$g); # cuz its full of alleles
+    unless (exists $hash->{$str}) {
+      $hash->{$str} = 1;
+      push @dedup, $g;
+    }
+  }
+  return \@dedup;
+}
 
 sub drint() {
   my $msg = shift;
