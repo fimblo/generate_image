@@ -101,13 +101,14 @@ my $tot = $s+$c+$m;
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
 my $prev_best_distance = 1;
-my $distance_counter = 0;
+my @distance_history = qw/1 1 1 1 1/;
 my $radius_counter = 0;
 my $zombie = 0;
-my $DISTANCE_DIFF_THRESHOLD_XL = 0.001;
-my $DISTANCE_DIFF_THRESHOLD_L  = 0.0001;
-my $DISTANCE_DIFF_THRESHOLD_M  = 0.00001;
-my $DISTANCE_DIFF_THRESHOLD_S  = 0.000001;
+my $DISTANCE_DIFF_THRESHOLD_XL    = 0.001;
+my $DISTANCE_DIFF_THRESHOLD_L     = 0.0001;
+my $DISTANCE_DIFF_THRESHOLD_M     = 0.00001;
+my $DISTANCE_DIFF_THRESHOLD_S     = 0.000001;
+my $DISTANCE_DIFF_THRESHOLD_TINY  = 0.0000001;
 my $distance_threshold = $DISTANCE_DIFF_THRESHOLD_XL;
 
 for (my $i = 0; $i < $iterations; $i++) {
@@ -151,7 +152,10 @@ for (my $i = 0; $i < $iterations; $i++) {
   #
   # Exception: if there is a total of less than six rounds
   #            we make no changes to strategy.
-  $distance_counter++ if ($distance_diff < $distance_threshold);
+  push @distance_history, $distance_diff;
+  shift @distance_history if (@distance_history > 5);
+  my $sum = 0; $sum += $_ for @distance_history;
+   
 
   # If zombie mode is on, turn it off after resetting original
   # survivor/mate/mutate ratios.
@@ -164,7 +168,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   }
 
   # Check if we want to shake stuff up a bit.
-  if ($iterations > 5 and $distance_counter > 4) {
+  if ($iterations > 5 and $sum < $distance_threshold) {
     print "There was no real change for 5 cycles. Shaking things up a bit.\n";
 
     if ($radius_counter == 0) { # x-large. Go to large
@@ -185,8 +189,14 @@ for (my $i = 0; $i < $iterations; $i++) {
       &set_max_radius(50);
       $distance_threshold = $DISTANCE_DIFF_THRESHOLD_S;
     }
-    elsif ($radius_counter == 3) { # small. go to XL
-      print "Changing circle size S->XL\n";
+    elsif ($radius_counter == 3) { # small. go to tiny
+      print "Changing circle size S->tiny\n";
+      &set_min_radius(2);
+      &set_max_radius(25);
+      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_TINY;
+    }
+    elsif ($radius_counter == 3) { # tiny. go to XL
+      print "Changing circle size tiny->XL\n";
       &set_min_radius(300);
       &set_max_radius(500);
       $distance_threshold = $DISTANCE_DIFF_THRESHOLD_XL;
@@ -204,7 +214,7 @@ for (my $i = 0; $i < $iterations; $i++) {
     
 
     $radius_counter = ($radius_counter + 1) % 4;
-    $distance_counter = 0;
+    @distance_history = (1);
   }
 
   $prev_best_distance = $best_distance;
