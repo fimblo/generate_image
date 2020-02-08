@@ -23,6 +23,7 @@ our @EXPORT_OK = qw/
   &set_survival_percent
 
   &generate_genes
+  &generate_gene
   &create_images
   &create_image
   &get_comparisons_to_target
@@ -224,17 +225,18 @@ sub generate_genes_from_seed() {
 
 sub generate_genes_from_scratch() {
   my $population;
-
   for (my $i = 0; $i < $START_POPULATION; $i++) {
-    my $gene_len = $GENE_START_LENGTH;
-    my @gene;
-    for (my $j = 0; $j < $gene_len; $j++) {
-      push @gene, &generate_allele;
-    }
-    #    $population->{index} = $i;
-    push @$population, \@gene;
+    push @$population, &generate_gene();
   }
   return $population;
+}
+
+sub generate_gene() {
+  my @gene;
+  for (my $i = 0; $i < $GENE_START_LENGTH; $i++) {
+    push @gene, &generate_allele;
+  }
+  return \@gene;
 }
 
 
