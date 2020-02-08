@@ -24,6 +24,7 @@ our @EXPORT_OK = qw/
 
   &generate_genes
   &create_images
+  &create_image
   &get_comparisons_to_target
   &get_best_gene_indices
 
