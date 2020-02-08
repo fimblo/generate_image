@@ -11,6 +11,7 @@ use strict;
 use Exporter qw(import);
 our @EXPORT_OK = qw/
   &set_best_distance
+  &set_bgimage
   &set_debug
   &set_gene_start_length
   &set_image_dimensions
@@ -52,15 +53,17 @@ my ($WIDTH, $HEIGHT) = (600, 600);
 my $WIDTHXHEIGHT = $WIDTH . 'x' . $HEIGHT;
 my $MAX_RADIUS = 100;
 my $MIN_RADIUS = 4;
+my $BGIMAGE = 'canvas:white';
 
 my $BEST_DISTANCE = undef;
 
 # --------------------------------------------------
 # Subs
 
+sub set_bgimage()           { $BGIMAGE           = shift || return $BGIMAGE           }
 sub set_best_distance()     { $BEST_DISTANCE     = shift || return $BEST_DISTANCE     }
 sub set_debug()             { $DEBUG             = shift || return $DEBUG             }
-sub set_max_population()    { $START_POPULATION    = shift || return $START_POPULATION    }
+sub set_max_population()    { $START_POPULATION  = shift || return $START_POPULATION  }
 sub set_gene_start_length() { $GENE_START_LENGTH = shift || return $GENE_START_LENGTH }
 sub set_survival_percent()  { $SURVIVAL_PERCENT  = shift || return $SURVIVAL_PERCENT  }
 sub set_mutate_percent()    { $MUTATE_PERCENT    = shift || return $MUTATE_PERCENT    }
@@ -269,7 +272,7 @@ sub create_image() {
     my $gene = shift;
     my $drawing = Image::Magick->new;
     $drawing->Set(size=>"$WIDTHXHEIGHT");
-    $drawing->Read('canvas:white');
+    $drawing->Read($BGIMAGE);
     $drawing->Set(magick=>'PNG32');
 
     foreach my $allele (@$gene) {

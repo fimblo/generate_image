@@ -14,6 +14,7 @@ use File::Basename;
 BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
+  &set_bgimage
   &set_gene_start_length
   &set_max_population
   &set_max_radius
@@ -38,7 +39,7 @@ my $basename = basename($0);
 my $helptext = << "EOM";
   Generate an image which, over generations, approximates target image.
 
- Usage: $basename -t <target-file> [-h -s <seed> -i <iter> -p <pool>]
+ Usage: $basename -t <target-file> [optional params]
 
   -t <target-file>  # image to approximate
 
@@ -48,6 +49,7 @@ my $helptext = << "EOM";
   -r <ratio>        # population ratio for next generation.
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
+  -b <bgimage>      # Start with this image as background (default: white)
   -h                # This help message
 EOM
 
@@ -57,6 +59,7 @@ my $target_image_filename = undef;
 my $seed_file = undef;
 my $iterations = 10;
 my $pool = 10;
+my $bgimage = 'canvas:white';
 my $ratio = "1:2:1";
 my $help;
 
@@ -65,6 +68,7 @@ GetOptions(
   "seed=s"       => \$seed_file,
   "iterations=i" => \$iterations,
   "pool=i"       => \$pool,
+  "bgimage=s"    => \$bgimage,
   "ratio=s"      => \$ratio,
   "help"         => \$help,
   ) or die ("bad commandline args\n");
@@ -74,6 +78,8 @@ if (! $target_image_filename or $help ) {
   exit 0;
 }
 # --------------------------------------------------
+
+&set_bgimage($bgimage);
 
 unless ($ratio =~ m/^(\d+):(\d+):(\d+)$/) {
   print << "EOM";
@@ -223,15 +229,19 @@ for (my $i = 0; $i < $iterations; $i++) {
 
   # --------------------------------------------------
   # Save the best image and corresponding gene
+  my $pad_size = 6;
+  my $padding = '0'x ($pad_size - length($i));
   my $best_image_so_far = $images->{$best_indices->[0]};
   mkdir "output" unless ( -d "output" );
   mkdir "output/$$" unless ( -d "output/$$" );
-  &save_image($best_image_so_far, "output/$$/image_$i.png");
+  &save_image($best_image_so_far, "output/$$/image_${padding}${i}.png");
   &save_gene(
     { distance => $best_distance,
       gene => \@best_genes },
-    "output/$$/gene_$i.txt");
+    "output/$$/gene_${padding}${i}.txt");
 }
+print "\nOutput saved to output/$$\n";
+
 
 sub get_gene_len_stats() {
   my $genes = shift;
