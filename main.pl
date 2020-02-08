@@ -224,12 +224,13 @@ for (my $i = 0; $i < $iterations; $i++) {
   # --------------------------------------------------
   # Save the best image and corresponding gene
   my $best_image_so_far = $images->{$best_indices->[0]};
-  mkdir "$$" unless ( -d "$$" );
-  &save_image($best_image_so_far, "$$/image_$i.png");
+  mkdir "output" unless ( -d "output" );
+  mkdir "output/$$" unless ( -d "output/$$" );
+  &save_image($best_image_so_far, "output/$$/image_$i.png");
   &save_gene(
     { distance => $best_distance,
       gene => \@best_genes },
-    "$$/gene_$i.txt");
+    "output/$$/gene_$i.txt");
 }
 
 sub get_gene_len_stats() {
