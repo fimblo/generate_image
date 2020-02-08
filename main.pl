@@ -34,6 +34,34 @@ use Genes qw/
   /;
 
 # --------------------------------------------------
+# Constants and such
+
+# Strategy stuff.
+my $strategies = { X => [200, 400],
+                   L => [100, 200],
+                   M => [50, 100],
+                   S => [25, 50],
+                   T => [2, 25],
+};
+my $l_map  = {L=>'0', M=>'1', S=>'2', T=>'3', X=>'4'};
+my $s_map  = {0=>'L', 1=>'M', 2=>'S', 3=>'T', 4=>'X'};
+my $s_name = {0=>'Large', 1=>'Medium', 2=>'Small', 3=>'Tiny', 4=>'eXtra large'};
+
+my $DISTANCE_DIFF_THRESHOLD = { X => 0.001,
+                                L => 0.0001,
+                                M => 0.00001,
+                                S => 0.000001,
+                                T => 0.0000001,
+};
+my $distance_threshold = 0;         # not a constant. oh well.
+
+my $DEFAULT_BGIMAGE  = 'canvas:white';
+my $DEFAULT_STRATEGY = 'L';
+
+
+
+
+# --------------------------------------------------
 # Help message
 my $basename = basename($0);
 my $helptext = << "EOM";
@@ -50,6 +78,7 @@ my $helptext = << "EOM";
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
   -b <bgimage>      # Start with this image as background (default: white)
+  -S <strategy>     # Size of circles. Can be X,L,M,S,T. (default: L)
   -h                # This help message
 EOM
 
@@ -59,7 +88,8 @@ my $target_image_filename = undef;
 my $seed_file = undef;
 my $iterations = 10;
 my $pool = 10;
-my $bgimage = 'canvas:white';
+my $bgimage = undef;
+my $strategy = undef;
 my $ratio = "1:2:1";
 my $help;
 
@@ -69,14 +99,32 @@ GetOptions(
   "iterations=i"  => \$iterations,
   "pool=i"        => \$pool,
   "bgimage=s"     => \$bgimage,
+  "Strategy=s"    => \$strategy,
   "ratio=s"       => \$ratio,
   "help"          => \$help,
   ) or die ("bad commandline args\n");
 
+# target image is mandatory
 if (! $target_image_filename or $help ) {
   print $helptext;
   exit 0;
 }
+
+# deal with background option
+$bgimage = $DEFAULT_BGIMAGE unless $bgimage;
+&set_bgimage($bgimage);
+
+# do we want to have another start strategy?
+if ($strategy) {
+  die "Legal strategies is one of X, L, M, S, or T."
+    unless (exists $strategies->{$strategy});
+}
+else {
+  $strategy = $DEFAULT_STRATEGY;
+}
+$distance_threshold = &radius_strategy($strategy);
+my $ui_radius = $strategy . ' ';
+
 
 
 unless ($ratio =~ m/^(\d+):(\d+):(\d+)$/) {
@@ -93,7 +141,6 @@ EOM
 }
 my ($s,$c,$m) = ($1, $2, $3); # capture digits from regex above
 my $tot = $s+$c+$m;
-&set_bgimage($bgimage);
 &set_survival_percent($s/$tot);
 &set_mate_percent($c/$tot);
 &set_mutate_percent($m/$tot);
@@ -106,24 +153,12 @@ my $tot = $s+$c+$m;
 # Giving the main loop a sense of history
 my $prev_best_distance = 1;     
 my @distance_history = qw/1 1 1 1 1/;
-my $radius_counter = 0;
+my $radius_counter = $l_map->{$strategy};
 my $zombie = 0;
 
-# Thresholds for changing strategy.
-my $DISTANCE_DIFF_THRESHOLD_XL    = 0.001;
-my $DISTANCE_DIFF_THRESHOLD_L     = 0.0001;
-my $DISTANCE_DIFF_THRESHOLD_M     = 0.00001;
-my $DISTANCE_DIFF_THRESHOLD_S     = 0.000001;
-my $DISTANCE_DIFF_THRESHOLD_TINY  = 0.0000001;
-my $distance_threshold = $DISTANCE_DIFF_THRESHOLD_XL;
 
 # Initial settings for the genes
-&set_min_radius(300);
-&set_max_radius(500);
 &set_gene_start_length(10);
-
-# UI thing.
-my $ui_radius = 'XL ';
 
 # Let's seed the population and get started.
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
@@ -179,7 +214,7 @@ for (my $i = 0; $i < $iterations; $i++) {
   # survivor/mate/mutate ratios.
   if ($zombie == 1) {
     print "   ====== Turning Zombie mode OFF ======\n";
-    &set_survival_percent($s/$tot);
+#    &set_survival_percent($s/$tot);
     &set_mate_percent($c/$tot);
     &set_mutate_percent($m/$tot);
     $zombie = 0;
@@ -189,60 +224,23 @@ for (my $i = 0; $i < $iterations; $i++) {
   push @distance_history, $distance_diff;
   shift @distance_history if (@distance_history > 5);
   my $sum = 0; $sum += $_ for @distance_history;
+
   if ($iterations > 5 and $sum < $distance_threshold) {
     print "\nThere was no real change for 5 cycles. Shaking things up a bit.\n";
 
-    if ($radius_counter == 0) { # x-large. Go to large
-      print "Changing circle size XL->L\n";
-      &set_min_radius(150);
-      &set_max_radius(300);
-      $ui_radius = 'L  ';
-      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_L;
-    }
-    elsif ($radius_counter == 1) { # large. go to medium
-      print "Changing circle size L->M\n";
-      &set_min_radius(50);
-      &set_max_radius(200);
-      $ui_radius = 'M  ';
-      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_M;
-    }
-    elsif ($radius_counter == 2) { # medium. go to small
-      print "Changing circle size M->S\n";
-      &set_min_radius(5);
-      &set_max_radius(50);
-      $ui_radius = 'S  ';
-      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_S;
-    }
-    elsif ($radius_counter == 3) { # small. go to tiny
-      print "Changing circle size S->tiny\n";
-      &set_min_radius(2);
-      &set_max_radius(25);
-      $ui_radius = 'T  ';
-      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_TINY;
-    }
-    elsif ($radius_counter == 3) { # tiny. go to XL
-      print "Changing circle size tiny->XL\n";
-      &set_min_radius(300);
-      &set_max_radius(500);
-      $ui_radius = 'XL ';
-      $distance_threshold = $DISTANCE_DIFF_THRESHOLD_XL;
-    }
-    else {
-      die "wtf you shouldn't come here.";
-    }
-
+    $ui_radius = $s_map->{$radius_counter} . ' ';
+    $distance_threshold = &radius_strategy($s_map->{$radius_counter});
+    print "Radius is now ". $s_name->{$radius_counter} . "\n";
+    $radius_counter = ($radius_counter + 1) % 4;
 
     print "   ====== Turning zombie mode ON ======\n";
-    &set_survival_percent(0.1);
+#    &set_survival_percent(0.1);
     &set_mate_percent(0.01);
     &set_mutate_percent(0.9);
     $zombie = 1;
-    
 
-    $radius_counter = ($radius_counter + 1) % 4;
     @distance_history = (1);
   }
-
   $prev_best_distance = $best_distance;
 
 
@@ -254,7 +252,10 @@ for (my $i = 0; $i < $iterations; $i++) {
   my $best_image_so_far = $images->{$best_indices->[0]};
   mkdir "output" unless ( -d "output" );
   mkdir "output/$$" unless ( -d "output/$$" );
-  &save_image($best_image_so_far, "output/$$/image_${padding}${i}.png");
+
+  if ($distance_diff != 0) {
+    &save_image($best_image_so_far, "output/$$/image_${padding}${i}.png");
+  }
   &save_gene(
     { distance => $best_distance,
       gene => \@best_genes },
@@ -262,6 +263,19 @@ for (my $i = 0; $i < $iterations; $i++) {
 }
 print "\nOutput saved to output/$$\n";
 
+
+
+# --------------------------------------------------
+# extra subs
+
+
+sub radius_strategy() {
+  my $new_strategy = shift ; # L,M,S,T,X
+  my $r = $strategies->{$new_strategy};
+  &set_min_radius($r->[0]);
+  &set_max_radius($r->[1]);
+  return $DISTANCE_DIFF_THRESHOLD->{$new_strategy};
+}
 
 sub get_gene_len_stats() {
   my $genes = shift;
