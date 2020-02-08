@@ -20,6 +20,7 @@ our @EXPORT_OK = qw/
   &set_max_radius
   &set_min_radius
   &set_mutate_percent
+  &set_recursive_mutation_percent
   &set_survival_percent
 
   &generate_genes
@@ -51,6 +52,7 @@ my $GENE_START_LENGTH = 50;
 my $SURVIVAL_PERCENT = 0.2;
 my $MATE_PERCENT = 0.4;
 my $MUTATE_PERCENT = 0.4;
+my $RECURSIVE_MUTATION_PERCENT = 0.1;
 my ($WIDTH, $HEIGHT) = (600, 600);
 my $WIDTHXHEIGHT = $WIDTH . 'x' . $HEIGHT;
 my $MAX_RADIUS = 100;
@@ -62,16 +64,17 @@ my $BEST_DISTANCE = undef;
 # --------------------------------------------------
 # Subs
 
-sub set_bgimage()           { $BGIMAGE           = shift || return $BGIMAGE           }
-sub set_best_distance()     { $BEST_DISTANCE     = shift || return $BEST_DISTANCE     }
-sub set_debug()             { $DEBUG             = shift || return $DEBUG             }
-sub set_max_population()    { $START_POPULATION  = shift || return $START_POPULATION  }
-sub set_gene_start_length() { $GENE_START_LENGTH = shift || return $GENE_START_LENGTH }
-sub set_survival_percent()  { $SURVIVAL_PERCENT  = shift || return $SURVIVAL_PERCENT  }
-sub set_mutate_percent()    { $MUTATE_PERCENT    = shift || return $MUTATE_PERCENT    }
-sub set_mate_percent()      { $MATE_PERCENT      = shift || return $MATE_PERCENT      }
-sub set_max_radius()        { $MAX_RADIUS        = shift || return $MAX_RADIUS        }
-sub set_min_radius()        { $MIN_RADIUS        = shift || return $MIN_RADIUS        }
+sub set_bgimage()                    { $BGIMAGE                    = shift || return $BGIMAGE                    }
+sub set_best_distance()              { $BEST_DISTANCE              = shift || return $BEST_DISTANCE              }
+sub set_debug()                      { $DEBUG                      = shift || return $DEBUG                      }
+sub set_max_population()             { $START_POPULATION           = shift || return $START_POPULATION           }
+sub set_gene_start_length()          { $GENE_START_LENGTH          = shift || return $GENE_START_LENGTH          }
+sub set_survival_percent()           { $SURVIVAL_PERCENT           = shift || return $SURVIVAL_PERCENT           }
+sub set_mutate_percent()             { $MUTATE_PERCENT             = shift || return $MUTATE_PERCENT             }
+sub set_recursive_mutation_percent() { $RECURSIVE_MUTATION_PERCENT = shift || return $RECURSIVE_MUTATION_PERCENT }
+sub set_mate_percent()               { $MATE_PERCENT               = shift || return $MATE_PERCENT               }
+sub set_max_radius()                 { $MAX_RADIUS                 = shift || return $MAX_RADIUS                 }
+sub set_min_radius()                 { $MIN_RADIUS                 = shift || return $MIN_RADIUS                 }
 sub set_image_dimensions() {
   my ($w, $h) = @_[0,1] || return [$WIDTH, $HEIGHT];
   ($WIDTH, $HEIGHT) = ($w, $h);
@@ -85,7 +88,7 @@ sub mutate_population() {
 
   for (my $i = 0; $i < $number_of_mutants; $i++) {
     my $gene = @$population[int(rand(scalar @$population))];
-    push @mutants, &mutate_gene($gene);
+    push @mutants, &mutate_gene(&dedup_gene($gene));
   }
 
   return \@mutants;
@@ -94,6 +97,10 @@ sub mutate_population() {
 
 sub mutate_gene() {
   my $gene = shift;
+  my $count = shift || 10;
+
+  return $gene unless $count;
+
   my $ran = int(rand(scalar @$gene)); # index of a random allele
   my $allele = &generate_allele;
 
@@ -110,7 +117,12 @@ sub mutate_gene() {
     splice(@newgene, $ran, 1, $allele);
   }
 
-  return &dedup_gene(\@newgene);
+  # 1/10 chance of another mutation (unless change in strategy)
+  my $newgene2 = \@newgene;
+  $newgene2 = &mutate_gene(\@newgene, --$count)
+    unless (int(rand(1 / $RECURSIVE_MUTATION_PERCENT)));
+
+  return $newgene2;
 }
 
 
@@ -217,7 +229,10 @@ sub generate_genes_from_seed() {
   print "$size genes loaded. The best gene has distance '$seed_distance' to image.\n";
   print "Creating " . ($START_POPULATION - $size) . " mutations of the seed.\n";
 
+  my $old_rec_m = &set_recursive_mutation_percent();
+  &set_recursive_mutation_percent(0.7);
   my $mutants = &mutate_population($population, $START_POPULATION - $size);
+  &set_recursive_mutation_percent($old_rec_m);
 
   push @$population, @$mutants;
   return $population;

@@ -22,6 +22,7 @@ use Genes qw/
   &set_survival_percent
   &set_mate_percent
   &set_mutate_percent
+  &set_recursive_mutation_percent
   &generate_genes
   &create_images
   &get_comparisons_to_target
@@ -217,6 +218,7 @@ for (my $i = 0; $i < $iterations; $i++) {
 #    &set_survival_percent($s/$tot);
     &set_mate_percent($c/$tot);
     &set_mutate_percent($m/$tot);
+    &set_recursive_mutation_percent(0.1);
     $zombie = 0;
   }
 
@@ -237,6 +239,7 @@ for (my $i = 0; $i < $iterations; $i++) {
 #    &set_survival_percent(0.1);
     &set_mate_percent(0.01);
     &set_mutate_percent(0.9);
+    &set_recursive_mutation_percent(0.4);
     $zombie = 1;
 
     @distance_history = (1);
