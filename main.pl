@@ -57,7 +57,7 @@ my $DISTANCE_DIFF_THRESHOLD = { X => 0.001,
 my $distance_threshold = 0;         # not a constant. oh well.
 
 my $DEFAULT_BGIMAGE  = 'canvas:white';
-my $DEFAULT_STRATEGY = 'L';
+my $DEFAULT_STRATEGY = 'X';
 
 
 
@@ -79,7 +79,7 @@ my $helptext = << "EOM";
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
   -b <bgimage>      # Start with this image as background (default: white)
-  -S <strategy>     # Size of circles. Can be X,L,M,S,T. (default: L)
+  -S <strategy>     # Size of circles. Can be X,L,M,S,T. (default: X)
   -h                # This help message
 EOM
 
@@ -215,7 +215,6 @@ for (my $i = 0; $i < $iterations; $i++) {
   # survivor/mate/mutate ratios.
   if ($zombie == 1) {
     print "   ====== Turning Zombie mode OFF ======\n";
-#    &set_survival_percent($s/$tot);
     &set_mate_percent($c/$tot);
     &set_mutate_percent($m/$tot);
     &set_recursive_mutation_percent(0.1);
@@ -236,7 +235,6 @@ for (my $i = 0; $i < $iterations; $i++) {
     $radius_counter = ($radius_counter + 1) % 4;
 
     print "   ====== Turning zombie mode ON ======\n";
-#    &set_survival_percent(0.1);
     &set_mate_percent(0.01);
     &set_mutate_percent(0.9);
     &set_recursive_mutation_percent(0.4);
