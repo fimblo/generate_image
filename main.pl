@@ -32,6 +32,7 @@ use Genes qw/
   &mate_population
   &save_image
   &save_gene
+  &diversify_population
   /;
 
 # --------------------------------------------------
@@ -153,7 +154,8 @@ my $tot = $s+$c+$m;
 
 # Giving the main loop a sense of history
 my $prev_best_distance = 1;     
-my @distance_history = qw/1 1 1 1 1/;
+my @short_distance_history = qw/1 1 1 1 1/;
+my @long_distance_history = qw/1 1 1 1 1 1 1 1 1/;
 my $radius_counter = $l_map->{$strategy};
 my $zombie = 0;
 
@@ -200,16 +202,6 @@ for (my $i = 0; $i < $iterations; $i++) {
   print $ui_radius . "Best distance: $best_distance\t(diff: $distance_diff)\n";
 
 
-  # --------------------------------------------------
-
-  # If we have no real progress for five rounds, then change
-  # strategies (assuming there are enough rounds total).
-  #
-  # Currently the change in strategy available is to change the radius
-  # of the circles. If they are large, make them smaller. If they are
-  # tiny, make them huge.
-  #
-   
 
   # If zombie mode is on, turn it off after resetting original
   # survivor/mate/mutate ratios.
@@ -221,12 +213,45 @@ for (my $i = 0; $i < $iterations; $i++) {
     $zombie = 0;
   }
 
-  # Check if we want to shake stuff up a bit.
-  push @distance_history, $distance_diff;
-  shift @distance_history if (@distance_history > 5);
-  my $sum = 0; $sum += $_ for @distance_history;
 
-  if ($iterations > 5 and $sum < $distance_threshold) {
+  # --------------------------------------------------
+
+  # If we have no real progress for five rounds, then change
+  # strategies (assuming there are enough rounds total).
+  #
+  # Currently the change in strategy available is to change the radius
+  # of the circles. If they are large, make them smaller. If they are
+  # tiny, make them huge.
+  #
+   
+  push @long_distance_history, $distance_diff;
+  shift @long_distance_history if (@long_distance_history > 9);
+  my $lsum = 0; $lsum += $_ for @long_distance_history;
+
+  if ($iterations > 5 and $lsum < $DISTANCE_DIFF_THRESHOLD->{'S'}) {
+    print "\nThere was no real change for 11 cycles. Time to diversify the population.\n";
+    &set_min_radius(2);
+    &set_max_radius(100);
+
+    my $new_pop = &diversify_population(\@best_genes, $target_image_filename);
+    my $mutants = &mutate_population($new_pop);
+    my $children = &mate_population($new_pop);
+    $population = [ @$new_pop, @$children, @$mutants];
+
+    $distance_threshold = &radius_strategy('S');
+    $radius_counter = $l_map->{'S'};
+    $ui_radius = $s_map->{$radius_counter} . ' ';
+
+    @long_distance_history = (1);
+    @short_distance_history = (1);
+  }
+
+
+  push @short_distance_history, $distance_diff;
+  shift @short_distance_history if (@short_distance_history > 5);
+  my $ssum = 0; $ssum += $_ for @short_distance_history;
+
+  if ($iterations > 5 and $ssum < $distance_threshold) {
     print "\nThere was no real change for 5 cycles. Shaking things up a bit.\n";
 
     $ui_radius = $s_map->{$radius_counter} . ' ';
@@ -240,7 +265,7 @@ for (my $i = 0; $i < $iterations; $i++) {
     &set_recursive_mutation_percent(0.4);
     $zombie = 1;
 
-    @distance_history = (1);
+    @short_distance_history = (1);
   }
   $prev_best_distance = $best_distance;
 

@@ -23,6 +23,8 @@ our @EXPORT_OK = qw/
   &set_recursive_mutation_percent
   &set_survival_percent
 
+  &diversify_population
+
   &generate_genes
   &generate_gene
   &create_images
@@ -151,6 +153,72 @@ sub mate_genes() {
 
   return &dedup_gene(\@child);
 }
+
+sub scrub_gene() {
+  my $g = shift;
+  my @new_gene;
+
+
+  # for now, just a deep copy.
+  for (my $i = 0; $i < @$g; $i++) {
+    my $a = $g->[$i];
+    my @new_allele;
+    for (my $j = 0; $j < @$a; $j++) {
+      push @new_allele, $a->[$j];
+    }
+    push @new_gene, \@new_allele;
+  }
+
+  return \@new_gene;
+}
+
+sub diversify_population() {
+  my $population = shift;
+  my $target_filename = shift;
+  my @new_population;
+
+  print "Diversifying " . scalar @$population . " genes.\n";
+
+  my $target = &load_target_image($target_filename);
+  my $cnt = 0;
+  my $ui_dist;
+  $|=1;
+  for my $g (@$population) {
+    print "Gene #".$cnt;
+    my $gene = &scrub_gene($g);
+    my $drawing = &create_image($gene);
+
+    my $result = $target->Compare(image=>$drawing, metric=>'mae');
+    my $distance = $result->Get('error');
+    print ": Improve from $distance to ";
+
+    my $more_mutations_wanted = 20;
+    while ($more_mutations_wanted) {
+      my $allele = &generate_allele;
+      my ($x, $y, $rad, $r, $g, $b) = @$allele;
+      my ($xr, $yr) = ($x, $y + $rad);
+      my $temp_drawing = $drawing->Clone();
+
+      $temp_drawing->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $xr,$yr");
+      my $res = $temp_drawing->Compare(image=>$target, metric=>'mae');
+      my $local_distance = $res->Get('error');
+
+      if ($local_distance < $distance) {
+        $ui_dist = $distance = $local_distance;
+        $drawing = $temp_drawing;
+        push @$gene, $allele;
+        $more_mutations_wanted--;
+      }
+    }
+    print "$ui_dist\n";
+    $cnt++;
+    push @new_population, $gene;
+  }
+  $|=0;
+  return \@new_population;
+}
+
+
 
 
 sub dedup_gene() {
@@ -315,6 +383,7 @@ sub create_images() {
   return $images;
 }
 
+
 sub get_best_gene_indices () {
   my $images = shift;
   my $target_filename = shift;
@@ -326,8 +395,6 @@ sub get_best_gene_indices () {
     my $result = $target->Compare(image=>$images->{$index}, metric=>'mae');
     my $diff = $result->Get('error');
     $distance_map->{$diff} = $index;
-
-    #print "$index -> $diff\n";
   }
 
   my @distances_sorted = sort keys %{$distance_map};
@@ -339,9 +406,6 @@ sub get_best_gene_indices () {
   foreach my $distance (@best_matches) {
     push @indices, $distance_map->{$distance};
   }
-
-  # &drint("cut-off: $cut_off_index");
-  # &drint("length of array " . scalar @best_matches);
 
   return \@indices;
 }
