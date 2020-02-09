@@ -1,4 +1,10 @@
 * Known problems
+** for short populations, the mutation ratio bugs out
+   $ perl main.pl -t anna.png -p 20 -i 5000 -se output/gen2706-anna/series.014/gene_003365.txt
+   Loading file 'output/gen2706-anna/series.014/gene_003365.txt'.
+   22 genes loaded. The best gene has distance '0.0649357727423015' to image.
+   Creating -2 mutations of the seed.
+   Creating images::::::::::::::::::^C
 
 * cleaning todos
 ** TODO fix order of radius strategies
