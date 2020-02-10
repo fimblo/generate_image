@@ -41,6 +41,8 @@ our @EXPORT_OK = qw/
   &save_gene
   &save_image
   &save_images
+
+  &scrub_gene2
   /;
 
 
@@ -171,6 +173,76 @@ sub scrub_gene() {
 
   return \@new_gene;
 }
+
+sub scrub_gene2() {
+  my $gene = shift;
+  my $target_filename = shift;
+  my $target = &load_target_image($target_filename);
+  my @retarr;
+
+  &drint('start');
+
+  # we'll put all images as layers into this in array context, like so:
+  # push @$base, $some_image;
+  my $base = Image::Magick->new(size=>$WIDTHXHEIGHT, magick=>'PNG32' );
+  $base->ReadImage('canvas:white');
+
+  # each image will be drawn onto this transparent layer.
+  my $transparent = Image::Magick->new(size=>'800x600');
+  $transparent->ReadImage('null:');
+
+  &drint('creating layers from alleles');
+
+  # create a layer for each gene
+  for my $allele (@$gene) {
+    my ($x, $y, $rad, $r, $g, $b) = @$allele;
+    my ($xr, $yr) = ($x, $y + $rad);
+    my $layer = $transparent->Clone();
+    $layer->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $xr,$yr");
+    push @$base, $layer;
+  }
+
+  # Flatten $base and get distance to target image
+  my $flat = $base->Flatten(background=>'none');
+  my $result = $target->Compare(image=>$flat, metric=>'mae');
+  my $distance = $result->Get('error');
+
+  &drint('prepping to remove alleles one at a time');
+
+  # Now in a loop, let's remove a layer, starting from 0. If it was a
+  # useful layer, the distance _should_ get worse. If it doesn't get
+  # worse, we know that it was a useless allele, and we can mark it
+  # for removal from the gene.
+  my @indices_to_keep;
+  for (my $i = 0; $i < @$base; $i++) {
+    print "Allele #".$i.':';
+    my $removed_allele = splice(@$base, $i, 1);
+    # do distance check
+    my $tmp = $base->Flatten(background => 'none');
+    my $res = $target->Compare(image => $tmp, metric => 'mae');
+    my $local_distance = $res->Get('error');
+
+    # return the allele
+    splice(@$base, $i, 0, $removed_allele);
+
+    if ($local_distance > $distance ) { # removing the allele made things worse
+      print "\tkeep.\n";
+      push @indices_to_keep, $i;
+    } else { #removing the allele made things better or the same
+      print "\tremove.\n";
+    }
+  }
+
+  @retarr = @{$gene}[@indices_to_keep];
+  my $old_len = @$gene;
+  my $new_len = @retarr;
+
+  print "Scrubbed Gene. Old len: $old_len, New len: $new_len\n" if ($new_len < $old_len);
+  return \@retarr;
+}
+
+
+
 
 sub diversify_population() {
   my $population = shift;
