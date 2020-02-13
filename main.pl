@@ -14,20 +14,20 @@ use File::Basename;
 BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
-  &set_bgimage
-  &set_gene_start_length
-  &set_max_population
-  &set_max_radius
-  &set_min_radius
-  &set_survival_percent
-  &set_mate_percent
-  &set_mutate_percent
-  &set_recursive_mutation_percent
+  &bgimage
+  &gene_start_length
+  &max_population
+  &max_radius
+  &min_radius
+  &best_distance
+  &survival_percent
+  &mate_percent
+  &mutate_percent
+  &recursive_mutation_percent
   &generate_genes
   &create_images
   &get_comparisons_to_target
   &get_best_gene_indices
-  &set_best_distance
   &mutate_population
   &mate_population
   &save_image
@@ -114,7 +114,7 @@ if (! $target_image_filename or $help ) {
 
 # deal with background option
 $bgimage = $DEFAULT_BGIMAGE unless $bgimage;
-&set_bgimage($bgimage);
+&bgimage($bgimage);
 
 # do we want to have another start strategy?
 if ($strategy) {
@@ -143,10 +143,10 @@ EOM
 }
 my ($s,$c,$m) = ($1, $2, $3); # capture digits from regex above
 my $tot = $s+$c+$m;
-&set_survival_percent($s/$tot);
-&set_mate_percent($c/$tot);
-&set_mutate_percent($m/$tot);
-&set_max_population($pool);
+&survival_percent($s/$tot);
+&mate_percent($c/$tot);
+&mutate_percent($m/$tot);
+&max_population($pool);
 
 
 # ==================================================
@@ -161,7 +161,7 @@ my $zombie = 0;
 
 
 # Initial settings for the genes
-&set_gene_start_length(10);
+&gene_start_length(10);
 
 # Let's seed the population and get started.
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
@@ -189,9 +189,9 @@ for (my $i = 0; $i < $iterations; $i++) {
 
   # --------------------------------------------------
   # Output status for user
-  my $best_distance = &set_best_distance();
-  my $min_rad = &set_min_radius();
-  my $max_rad = &set_max_radius();
+  my $best_distance = &best_distance();
+  my $min_rad = &min_radius();
+  my $max_rad = &max_radius();
   my $distance_diff = $prev_best_distance - $best_distance;
   my $b_pop = scalar @best_genes;
   my $m_pop = scalar @$mutants;
@@ -207,9 +207,9 @@ for (my $i = 0; $i < $iterations; $i++) {
   # survivor/mate/mutate ratios.
   if ($zombie == 1) {
     print "   ====== Turning Zombie mode OFF ======\n";
-    &set_mate_percent($c/$tot);
-    &set_mutate_percent($m/$tot);
-    &set_recursive_mutation_percent(0.1);
+    &mate_percent($c/$tot);
+    &mutate_percent($m/$tot);
+    &recursive_mutation_percent(0.1);
     $zombie = 0;
   }
 
@@ -230,8 +230,8 @@ for (my $i = 0; $i < $iterations; $i++) {
 
   if ($iterations > 5 and $lsum < $DISTANCE_DIFF_THRESHOLD->{'S'}) {
     print "\nThere was no real change for 11 cycles. Time to diversify the population.\n";
-    &set_min_radius(2);
-    &set_max_radius(100);
+    &min_radius(2);
+    &max_radius(100);
 
     my $new_pop = &diversify_population(\@best_genes, $target_image_filename);
     my $mutants = &mutate_population($new_pop);
@@ -260,9 +260,9 @@ for (my $i = 0; $i < $iterations; $i++) {
     $radius_counter = ($radius_counter + 1) % 4;
 
     print "   ====== Turning zombie mode ON ======\n";
-    &set_mate_percent(0.01);
-    &set_mutate_percent(0.9);
-    &set_recursive_mutation_percent(0.4);
+    &mate_percent(0.01);
+    &mutate_percent(0.9);
+    &recursive_mutation_percent(0.4);
     $zombie = 1;
 
     @short_distance_history = (1);
@@ -298,8 +298,8 @@ print "\nOutput saved to output/$$\n";
 sub radius_strategy() {
   my $new_strategy = shift ; # L,M,S,T,X
   my $r = $strategies->{$new_strategy};
-  &set_min_radius($r->[0]);
-  &set_max_radius($r->[1]);
+  &min_radius($r->[0]);
+  &max_radius($r->[1]);
   return $DISTANCE_DIFF_THRESHOLD->{$new_strategy};
 }
 

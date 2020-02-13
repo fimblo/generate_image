@@ -12,7 +12,8 @@
 
 * cleaning todos
 ** TODO fix order of radius strategies
-** TODO rename all setters. current naming is confusing
+** DONE rename all setters. current naming is confusing
+   CLOSED: [2020-02-13 tor 21:41]
 ** TODO write description for each sub
 ** TODO consider fixing all subs so that they take positional params
         from: 

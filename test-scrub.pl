@@ -4,20 +4,10 @@ use Data::Dumper;
 BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
-  &set_bgimage
-  &set_gene_start_length
-  &set_max_population
-  &set_max_radius
-  &set_min_radius
-  &set_survival_percent
-  &set_mate_percent
-  &set_mutate_percent
-  &set_recursive_mutation_percent
   &generate_genes
   &create_images
   &get_comparisons_to_target
   &get_best_gene_indices
-  &set_best_distance
   &mutate_population
   &mate_population
   &save_image

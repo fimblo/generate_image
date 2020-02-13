@@ -10,18 +10,18 @@ use strict;
 
 use Exporter qw(import);
 our @EXPORT_OK = qw/
-  &set_best_distance
-  &set_bgimage
-  &set_debug
-  &set_gene_start_length
-  &set_image_dimensions
-  &set_mate_percent
-  &set_max_population
-  &set_max_radius
-  &set_min_radius
-  &set_mutate_percent
-  &set_recursive_mutation_percent
-  &set_survival_percent
+  &best_distance
+  &bgimage
+  &debug
+  &gene_start_length
+  &image_dimensions
+  &mate_percent
+  &max_population
+  &max_radius
+  &min_radius
+  &mutate_percent
+  &recursive_mutation_percent
+  &survival_percent
 
   &diversify_population
 
@@ -68,18 +68,18 @@ my $BEST_DISTANCE = undef;
 # --------------------------------------------------
 # Subs
 
-sub set_bgimage()                    { $BGIMAGE                    = shift || return $BGIMAGE                    }
-sub set_best_distance()              { $BEST_DISTANCE              = shift || return $BEST_DISTANCE              }
-sub set_debug()                      { $DEBUG                      = shift || return $DEBUG                      }
-sub set_max_population()             { $START_POPULATION           = shift || return $START_POPULATION           }
-sub set_gene_start_length()          { $GENE_START_LENGTH          = shift || return $GENE_START_LENGTH          }
-sub set_survival_percent()           { $SURVIVAL_PERCENT           = shift || return $SURVIVAL_PERCENT           }
-sub set_mutate_percent()             { $MUTATE_PERCENT             = shift || return $MUTATE_PERCENT             }
-sub set_recursive_mutation_percent() { $RECURSIVE_MUTATION_PERCENT = shift || return $RECURSIVE_MUTATION_PERCENT }
-sub set_mate_percent()               { $MATE_PERCENT               = shift || return $MATE_PERCENT               }
-sub set_max_radius()                 { $MAX_RADIUS                 = shift || return $MAX_RADIUS                 }
-sub set_min_radius()                 { $MIN_RADIUS                 = shift || return $MIN_RADIUS                 }
-sub set_image_dimensions() {
+sub bgimage()                    { $BGIMAGE                    = shift || return $BGIMAGE                    }
+sub best_distance()              { $BEST_DISTANCE              = shift || return $BEST_DISTANCE              }
+sub debug()                      { $DEBUG                      = shift || return $DEBUG                      }
+sub max_population()             { $START_POPULATION           = shift || return $START_POPULATION           }
+sub gene_start_length()          { $GENE_START_LENGTH          = shift || return $GENE_START_LENGTH          }
+sub survival_percent()           { $SURVIVAL_PERCENT           = shift || return $SURVIVAL_PERCENT           }
+sub mutate_percent()             { $MUTATE_PERCENT             = shift || return $MUTATE_PERCENT             }
+sub recursive_mutation_percent() { $RECURSIVE_MUTATION_PERCENT = shift || return $RECURSIVE_MUTATION_PERCENT }
+sub mate_percent()               { $MATE_PERCENT               = shift || return $MATE_PERCENT               }
+sub max_radius()                 { $MAX_RADIUS                 = shift || return $MAX_RADIUS                 }
+sub min_radius()                 { $MIN_RADIUS                 = shift || return $MIN_RADIUS                 }
+sub image_dimensions() {
   my ($w, $h) = @_[0,1] || return [$WIDTH, $HEIGHT];
   ($WIDTH, $HEIGHT) = ($w, $h);
   $WIDTHXHEIGHT = "${WIDTH}x${HEIGHT}";
@@ -428,10 +428,10 @@ sub generate_genes_from_seed() {
   print "$size genes loaded. The best gene has distance '$seed_distance' to image.\n";
   print "Creating " . ($START_POPULATION - $size) . " mutations of the seed.\n";
 
-  my $old_rec_m = &set_recursive_mutation_percent();
-  &set_recursive_mutation_percent(0.7);
+  my $old_rec_m = &recursive_mutation_percent();
+  &recursive_mutation_percent(0.7);
   my $mutants = &mutate_population($population, $START_POPULATION - $size);
-  &set_recursive_mutation_percent($old_rec_m);
+  &recursive_mutation_percent($old_rec_m);
 
   push @$population, @$mutants;
   return $population;
@@ -531,7 +531,7 @@ sub get_best_gene_indices () {
   my @distances_sorted = sort keys %{$distance_map};
   my $cut_off_index = int ($START_POPULATION * $SURVIVAL_PERCENT) - 1;
   my @best_matches = @distances_sorted[0.. $cut_off_index];
-  &set_best_distance($best_matches[0]);
+  &best_distance($best_matches[0]);
 
   my @indices;
   foreach my $distance (@best_matches) {
