@@ -42,7 +42,7 @@ our @EXPORT_OK = qw/
   &save_image
   &save_images
 
-  &scrub_gene2
+  &scrub_gene
   /;
 
 
@@ -156,31 +156,45 @@ sub mate_genes() {
   return &dedup_gene(\@child);
 }
 
+
+
 sub scrub_gene() {
-  my $g = shift;
-  my @new_gene;
-
-
-  # for now, just a deep copy.
-  for (my $i = 0; $i < @$g; $i++) {
-    my $a = $g->[$i];
-    my @new_allele;
-    for (my $j = 0; $j < @$a; $j++) {
-      push @new_allele, $a->[$j];
-    }
-    push @new_gene, \@new_allele;
-  }
-
-  return \@new_gene;
-}
-
-sub scrub_gene2() {
   my $gene = shift;
   my $target_filename = shift;
   my $target = &load_target_image($target_filename);
   my @retarr;
 
-  &drint('start');
+
+  sub _helper_single {
+    my $gene        = shift;
+    my $transparent = shift;
+    my $layer = $transparent->Clone();
+
+    for my $allele (@$gene) {
+      my ($x, $y, $rad, $r, $g, $b) = @$allele;
+      my ($xr, $yr) = ($x, $y + $rad);
+      $layer->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $xr,$yr");
+    }
+    return $layer;
+  }
+
+  sub _helper_multi {
+    my $gene        = shift;
+    my $transparent = shift;
+    my @retarr;
+
+    for my $allele (@$gene) {
+      my ($x, $y, $rad, $r, $g, $b) = @$allele;
+      my ($xr, $yr) = ($x, $y + $rad);
+      my $layer = $transparent->Clone();
+      $layer->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $xr,$yr");
+      push @retarr, $layer;
+    }
+    return \@retarr;
+  }
+
+
+  use POSIX;
 
   # we'll put all images as layers into this in array context, like so:
   # push @$base, $some_image;
@@ -191,45 +205,90 @@ sub scrub_gene2() {
   my $transparent = Image::Magick->new(size=>'800x600');
   $transparent->ReadImage('null:');
 
-  &drint('creating layers from alleles');
-
-  # create a layer for each gene
-  for my $allele (@$gene) {
-    my ($x, $y, $rad, $r, $g, $b) = @$allele;
-    my ($xr, $yr) = ($x, $y + $rad);
-    my $layer = $transparent->Clone();
-    $layer->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $xr,$yr");
-    push @$base, $layer;
-  }
-
-  # Flatten $base and get distance to target image
-  my $flat = $base->Flatten(background=>'none');
-  my $result = $target->Compare(image=>$flat, metric=>'mae');
-  my $distance = $result->Get('error');
-
-  &drint('prepping to remove alleles one at a time');
-
-  # Now in a loop, let's remove a layer, starting from 0. If it was a
-  # useful layer, the distance _should_ get worse. If it doesn't get
-  # worse, we know that it was a useless allele, and we can mark it
-  # for removal from the gene.
   my @indices_to_keep;
-  for (my $i = 0; $i < @$base; $i++) {
-    print "Allele #".$i.':';
-    my $removed_allele = splice(@$base, $i, 1);
-    # do distance check
-    my $tmp = $base->Flatten(background => 'none');
-    my $res = $target->Compare(image => $tmp, metric => 'mae');
-    my $local_distance = $res->Get('error');
+  my $gene_len = @$gene;
+  my $chunk_size = 50;
+  my $number_of_chunks = ceil($gene_len / $chunk_size);
+  print "Number of alleles in gene: $gene_len\n";
+  print "Splitting up into $number_of_chunks chunks\n";
 
-    # return the allele
-    splice(@$base, $i, 0, $removed_allele);
+  my $skip = 0;
+  for (my $i = 0; $i < $number_of_chunks; $i++) {
+    if ($number_of_chunks > 4 and $i == $number_of_chunks - 3) {
+      print "Skipping last three rounds\n";
+      $skip = 1;
+    }
 
-    if ($local_distance > $distance ) { # removing the allele made things worse
-      print "\tkeep.\n";
-      push @indices_to_keep, $i;
-    } else { #removing the allele made things better or the same
-      print "\tremove.\n";
+    print "Chunk $i\n";
+    my @first_layer = ();
+    my @middle_layers = ();
+    my @last_layer = ();
+
+
+    my $start_index = $chunk_size * $i;
+    my $end_index = ($chunk_size * ( $i + 1)) - 1; # otherwise it will be 100, not 99.
+    $end_index = $gene_len - 1 if ($end_index > $gene_len);
+
+    my $first =  [ @{$gene}[ (0               ..  ${start_index}-1 )] ];
+    my $middle = [ @{$gene}[ (${start_index}  ..  ${end_index}     )] ];
+    my $last =   [ @{$gene}[ (${end_index}+1  ..  -1               )] ];
+
+    if ($i == 0) {
+      @first_layer = ();
+    }
+    else {
+      @first_layer =  &_helper_single($first , $transparent);
+    }
+
+    # always do the middle rounds
+    @middle_layers = @{ &_helper_multi( $middle, $transparent) };
+
+    if ($i == $number_of_chunks - 1) {
+      @last_layer = ();
+    }
+    else {
+      @last_layer = &_helper_single($last, $transparent);
+    }
+
+    # Flatten all layers and get distance to target image.  Any later
+    # removals of a layer which leads to no change in distance means
+    # that layer had no real impact, only cost. These will be removed
+    # from the gene.
+    my $temp_base = $base->Clone();
+    push @$temp_base, (@first_layer, @middle_layers, @last_layer);
+    my $flat = $temp_base->Flatten(background=>'none');
+    my $result = $target->Compare(image=>$flat, metric=>'mae');
+    my $distance = $result->Get('error');
+
+    #print "# of middle layers: " . scalar @middle_layers . "\n";
+    for (my $j = 0; $j < @middle_layers; $j++) {
+      my $allele_nr = ($chunk_size * $i) + $j;
+      print "Allele $allele_nr/$gene_len:";
+
+      if ($skip ) { # don't do last chunks
+        print "\tkeep.\n";
+        push @indices_to_keep, $allele_nr;
+        next;
+      }
+
+      my $removed_layer = splice(@middle_layers, $j, 1);
+      # do distance check
+
+      $temp_base = $base->Clone();
+      push @$temp_base, (@first_layer, @middle_layers, @last_layer);
+      my $tmp = $temp_base->Flatten(background => 'none');
+      my $res = $target->Compare(image => $tmp, metric => 'mae');
+      my $local_distance = $res->Get('error');
+
+      # return the allele
+      splice(@middle_layers, $j, 0, $removed_layer);
+
+      if ($local_distance > $distance ) { # removing the allele made things worse
+        print "\tkeep.\n";
+        push @indices_to_keep, $allele_nr;
+      } else {     #removing the allele made things better or the same
+        print "\tremove.\n";
+      }
     }
   }
 

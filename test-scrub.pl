@@ -23,7 +23,7 @@ use Genes qw/
   &save_image
   &save_gene
   &diversify_population
-  &scrub_gene2
+  &scrub_gene
   &create_image
   /;
 
@@ -49,9 +49,10 @@ my $population    = $VAR1->{'gene'};
 
 # take first gene
 my $orig_g = $population->[0];
+print "Number of alleles in gene: " . scalar @$orig_g . "\n";
 
 # scrub it
-my $scrub_g = &scrub_gene2($orig_g, $target_filename);
+my $scrub_g = &scrub_gene($orig_g, $target_filename);
 
 # for both: check distance to target file
 my $r;
