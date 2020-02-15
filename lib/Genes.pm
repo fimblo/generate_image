@@ -232,8 +232,7 @@ sub scrub_gene() {
 
   my $skip = 0;
   for (my $i = 0; $i < $number_of_chunks; $i++) {
-    if ($number_of_chunks > 4 and $i == $number_of_chunks - 3) {
-      print "Skipping last three rounds\n";
+    if ($number_of_chunks > 4 and $i == $number_of_chunks - 2) {
       $skip = 1;
     }
 
@@ -281,7 +280,7 @@ sub scrub_gene() {
     #print "# of middle layers: " . scalar @middle_layers . "\n";
     for (my $j = 0; $j < @middle_layers; $j++) {
       my $allele_nr = ($chunk_size * $i) + $j;
-      print "Allele $allele_nr/$gene_len:";
+      print "Allele $allele_nr/". ($gene_len - 1) . ':';
 
       if ($skip ) { # don't do last chunks
         print "\tkeep.\n";
@@ -311,10 +310,6 @@ sub scrub_gene() {
   }
 
   @retarr = @{$gene}[@indices_to_keep];
-  my $old_len = @$gene;
-  my $new_len = @retarr;
-
-  print "Scrubbed Gene. Old len: $old_len, New len: $new_len\n" if ($new_len < $old_len);
   return \@retarr;
 }
 
