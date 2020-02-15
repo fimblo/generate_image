@@ -202,6 +202,10 @@ sub scrub_gene() {
     my @retarr;
 
     for my $allele (@$gene) {
+      if (! defined($allele)) {
+        print "Found undefined allele. skipping.\n";
+        next;
+      }
       my ($x, $y, $rad, $r, $g, $b) = @$allele;
       my ($xr, $yr) = ($x, $y + $rad);
       my $layer = $transparent->Clone();
