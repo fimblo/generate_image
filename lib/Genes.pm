@@ -156,6 +156,24 @@ sub mate_genes() {
   return &dedup_gene(\@child);
 }
 
+sub deep_copy_gene() {
+  my $g = shift;
+  my @new_gene;
+
+
+  # for now, just a deep copy.
+  for (my $i = 0; $i < @$g; $i++) {
+    my $a = $g->[$i];
+    my @new_allele;
+    for (my $j = 0; $j < @$a; $j++) {
+      push @new_allele, $a->[$j];
+    }
+    push @new_gene, \@new_allele;
+  }
+
+  return \@new_gene;
+}
+
 
 
 sub scrub_gene() {
@@ -316,7 +334,7 @@ sub diversify_population() {
   $|=1;
   for my $g (@$population) {
     print "Gene #".$cnt;
-    my $gene = &scrub_gene($g);
+    my $gene = &deep_copy_gene($g);
     my $drawing = &create_image($gene);
 
     my $result = $target->Compare(image=>$drawing, metric=>'mae');
