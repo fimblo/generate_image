@@ -33,6 +33,8 @@ use Genes qw/
   &save_image
   &save_gene
   &diversify_population
+  &scrub_gene
+  &datetime
   /;
 
 # --------------------------------------------------
@@ -44,10 +46,11 @@ my $strategies = { X => [200, 400],
                    M => [50, 100],
                    S => [25, 50],
                    T => [2, 25],
-};
-my $l_map  = {L=>'0', M=>'1', S=>'2', T=>'3', X=>'4'};
-my $s_map  = {0=>'L', 1=>'M', 2=>'S', 3=>'T', 4=>'X'};
-my $s_name = {0=>'Large', 1=>'Medium', 2=>'Small', 3=>'Tiny', 4=>'eXtra large'};
+                 };
+my $radius_strategy_limit = 4;
+my $l_map  = {M=>'0', S=>'1', T=>'2', X=>'3', L=>'4'};
+my $s_map  = {0=>'M', 1=>'S', 2=>'T', 3=>'X', 4=>'L'};
+my $s_name = {0=>'Medium', 1=>'Small', 2=>'Tiny', 3=>'eXtra large', 4=>'Large'};
 
 my $DISTANCE_DIFF_THRESHOLD = { X => 0.001,
                                 L => 0.0001,
@@ -80,7 +83,6 @@ my $helptext = << "EOM";
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
   -b <bgimage>      # Start with this image as background (default: white)
-  -S <strategy>     # Size of circles. Can be X,L,M,S,T. (default: X)
   -h                # This help message
 EOM
 
@@ -91,7 +93,6 @@ my $seed_file = undef;
 my $iterations = 10;
 my $pool = 10;
 my $bgimage = undef;
-my $strategy = undef;
 my $ratio = "1:2:1";
 my $help;
 
@@ -101,7 +102,6 @@ GetOptions(
   "iterations=i"  => \$iterations,
   "pool=i"        => \$pool,
   "bgimage=s"     => \$bgimage,
-  "Strategy=s"    => \$strategy,
   "ratio=s"       => \$ratio,
   "help"          => \$help,
   ) or die ("bad commandline args\n");
@@ -115,18 +115,6 @@ if (! $target_image_filename or $help ) {
 # deal with background option
 $bgimage = $DEFAULT_BGIMAGE unless $bgimage;
 &bgimage($bgimage);
-
-# do we want to have another start strategy?
-if ($strategy) {
-  die "Legal strategies is one of X, L, M, S, or T."
-    unless (exists $strategies->{$strategy});
-}
-else {
-  $strategy = $DEFAULT_STRATEGY;
-}
-$distance_threshold = &radius_strategy($strategy);
-my $ui_radius = $strategy . ' ';
-
 
 
 unless ($ratio =~ m/^(\d+):(\d+):(\d+)$/) {
@@ -152,12 +140,16 @@ my $tot = $s+$c+$m;
 # ==================================================
 # MAIN PROGRAM STARTS HERE
 
-# Giving the main loop a sense of history
-my $prev_best_distance = 1;     
-my @short_distance_history = qw/1 1 1 1 1/;
-my @long_distance_history = qw/1 1 1 1 1 1 1 1 1/;
+# Set initial strategy
+my $strategy = $DEFAULT_STRATEGY;
+$distance_threshold = &radius_strategy($strategy);
 my $radius_counter = $l_map->{$strategy};
-my $zombie = 0;
+my $ui_radius = $strategy . ' ';
+
+# Giving the main loop a sense of history
+my $prev_best_distance = 1;
+my $prev_best_image;
+my @distance_history = qw/1/;
 
 
 # Initial settings for the genes
@@ -168,125 +160,111 @@ my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
 
 # --------------------------------------------------
-# Main loop.
+# Outer loop
+print &datetime . " Starting...\n";
+my $inner_cnt = 0;
+my $outer_cnt = 0;
+my $lsum = 1;
+while (1) {
 
-for (my $i = 0; $i < $iterations; $i++) {
+  my @best_genes;
 
-  # Create images from population
-  # returns a map of images, key is index in $population
-  my $images = &create_images($population);
+  # loop till little diff for some rounds (number depends on strategy level)
+  until ($lsum < $distance_threshold) {
 
-  # get indices of best genes in population arref
-  my $best_indices = &get_best_gene_indices($images, $target_image_filename);
+    # returns a map of images, key is index in $population
+    my $images = &create_images($population);
 
-  # Prep the next generation of genes
-  my @best_genes = @{$population}[@$best_indices];
-  my $mutants = &mutate_population(\@best_genes);
-  my $children = &mate_population(\@best_genes);
-  $population = [ @best_genes, @$children, @$mutants];
+    # get indices of best genes in population arref
+    print &datetime . " Getting best indices\n";
+    my $best_indices = &get_best_gene_indices($images, $target_image_filename);
 
+    # Prep the next generation of genes
+    @best_genes = @{$population}[@$best_indices];
+    my $mutants = &mutate_population(\@best_genes);
+    my $children = &mate_population(\@best_genes);
+    $population = [ @best_genes, @$children, @$mutants];
 
-
-  # --------------------------------------------------
-  # Output status for user
-  my $best_distance = &best_distance();
-  my $min_rad = &min_radius();
-  my $max_rad = &max_radius();
-  my $distance_diff = $prev_best_distance - $best_distance;
-  my $b_pop = scalar @best_genes;
-  my $m_pop = scalar @$mutants;
-  my $c_pop = scalar @$children;
-  my ($max, $avg, $stdev) = &get_gene_len_stats(\@best_genes);
-  print $ui_radius . "Round $i: (S:$b_pop C:$c_pop M:$m_pop) (Gene length Max:$max Avg:$avg StdDev:$stdev)\n";
-  print $ui_radius . "Circle Radius (Min: $min_rad) (Max: $max_rad)\n";
-  print $ui_radius . "Best distance: $best_distance\t(diff: $distance_diff)\n";
+    # --------------------------------------------------
+    # Output status for user
+    my $best_distance = &best_distance();
+    my $distance_diff = $prev_best_distance - $best_distance;
+    &status_to_user({ previous_best_distance  => $prev_best_distance,
+                      best_genes  => \@best_genes,
+                      mutant_population  => scalar @$mutants,
+                      child_population  => scalar @$children });
 
 
+    # --------------------------------------------------
+    # Save the best image and corresponding gene
+    my $pad_size = 6;
+    my $padding = '0'x ($pad_size - length($inner_cnt));
+    my $best_image_so_far = $images->{$best_indices->[0]};
+    mkdir "output" unless ( -d "output" );
+    mkdir "output/$$" unless ( -d "output/$$" );
 
-  # If zombie mode is on, turn it off after resetting original
-  # survivor/mate/mutate ratios.
-  if ($zombie == 1) {
-    print "   ====== Turning Zombie mode OFF ======\n";
-    &mate_percent($c/$tot);
-    &mutate_percent($m/$tot);
-    &recursive_mutation_percent(0.1);
-    $zombie = 0;
+
+    # Save image and genes as files
+    if ($distance_diff != 0) { # save only if there is progress
+      &save_image($best_image_so_far, "output/$$/image_${padding}${inner_cnt}.png");
+      if ($prev_best_image) {
+        my $comparison = $best_image_so_far->Compare(image=>$prev_best_image, metric=>'mae');
+        &save_image($comparison, "output/$$/z_comparison.png");
+      }
+      $prev_best_image = $best_image_so_far;
+    }
+    &save_gene(
+               { distance => $best_distance,
+                 gene => \@best_genes },
+               "output/$$/gene_${padding}${inner_cnt}.txt");
+
+
+    # --------------------------------------------------
+    # Prep for next cycle
+
+    # update history
+    push @distance_history, $distance_diff;
+    shift @distance_history if (@distance_history > 15);
+    $lsum = 0; $lsum += $_ for @distance_history;
+    $prev_best_distance = $best_distance;
+    $inner_cnt++;
   }
 
+  # scrub
+  print &datetime . " Scrubbing dead alleles from population.\n";
+  my @scrubbed_genes;
+  for my $g (@best_genes) {
+    my $scrubbed = &scrub_gene($g, $target_image_filename);
+    push @scrubbed_genes, $scrubbed;
+  }
+  $population = \@scrubbed_genes;
 
-  # --------------------------------------------------
 
-  # If we have no real progress for five rounds, then change
-  # strategies (assuming there are enough rounds total).
-  #
-  # Currently the change in strategy available is to change the radius
-  # of the circles. If they are large, make them smaller. If they are
-  # tiny, make them huge.
-  #
-   
-  push @long_distance_history, $distance_diff;
-  shift @long_distance_history if (@long_distance_history > 9);
-  my $lsum = 0; $lsum += $_ for @long_distance_history;
 
-  if ($iterations > 5 and $lsum < $DISTANCE_DIFF_THRESHOLD->{'S'}) {
-    print "\nThere was no real change for 11 cycles. Time to diversify the population.\n";
-    &min_radius(2);
-    &max_radius(100);
-
-    my $new_pop = &diversify_population(\@best_genes, $target_image_filename);
-    my $mutants = &mutate_population($new_pop);
-    my $children = &mate_population($new_pop);
-    $population = [ @$new_pop, @$children, @$mutants];
-
-    $distance_threshold = &radius_strategy('S');
-    $radius_counter = $l_map->{'S'};
-    $ui_radius = $s_map->{$radius_counter} . ' ';
-
-    @long_distance_history = (1);
-    @short_distance_history = (1);
+  # diversify once every 20 outer cycles
+  if ($outer_cnt > 20) {
+    print &datetime . " Diversifying population.\n";
+    $population = &diversify_population($population, $target_image_filename, 3);
+    $outer_cnt = -1;            # since it's incremented at the end of loop
   }
 
-
-  push @short_distance_history, $distance_diff;
-  shift @short_distance_history if (@short_distance_history > 5);
-  my $ssum = 0; $ssum += $_ for @short_distance_history;
-
-  if ($iterations > 5 and $ssum < $distance_threshold) {
-    print "\nThere was no real change for 5 cycles. Shaking things up a bit.\n";
-
-    $ui_radius = $s_map->{$radius_counter} . ' ';
-    $distance_threshold = &radius_strategy($s_map->{$radius_counter});
-    print "Radius is now ". $s_name->{$radius_counter} . "\n";
-    $radius_counter = ($radius_counter + 1) % 4;
-
-    print "   ====== Turning zombie mode ON ======\n";
-    &mate_percent(0.01);
-    &mutate_percent(0.9);
-    &recursive_mutation_percent(0.4);
-    $zombie = 1;
-
-    @short_distance_history = (1);
+  # change to next radius (X->L->(M->S->T))
+  $radius_counter++;
+  if ($radius_counter > $radius_strategy_limit) {
+    $radius_counter = 0;
+    $radius_strategy_limit = 2;
   }
-  $prev_best_distance = $best_distance;
+  print &datetime . " Changing radius to " .  $s_name->{$radius_counter} . "\n";
+  $distance_threshold =  &radius_strategy( $s_map->{$radius_counter} );
+  $ui_radius = $s_map->{$radius_counter};
 
-
-
-  # --------------------------------------------------
-  # Save the best image and corresponding gene
-  my $pad_size = 6;
-  my $padding = '0'x ($pad_size - length($i));
-  my $best_image_so_far = $images->{$best_indices->[0]};
-  mkdir "output" unless ( -d "output" );
-  mkdir "output/$$" unless ( -d "output/$$" );
-
-  if ($distance_diff != 0) {
-    &save_image($best_image_so_far, "output/$$/image_${padding}${i}.png");
-  }
-  &save_gene(
-    { distance => $best_distance,
-      gene => \@best_genes },
-    "output/$$/gene_${padding}${i}.txt");
+  # prep for next cycle
+  @distance_history = qw/1/;
+  $lsum = 1;
+  $outer_cnt++;
 }
+
+
 print "\nOutput saved to output/$$\n";
 
 
@@ -294,9 +272,22 @@ print "\nOutput saved to output/$$\n";
 # --------------------------------------------------
 # extra subs
 
+sub status_to_user {
+  my $arg = shift;
+  my @best_genes = @{$arg->{best_genes}};
+  my $best_distance = &best_distance();
+  my $distance_diff = $arg->{previous_best_distance} - $best_distance;
+  my $b_pop = scalar @best_genes;
+  my $m_pop = $arg->{mutant_population};
+  my $c_pop = $arg->{child_population};
+  my ($max, $avg, $stdev) = &get_gene_len_stats(\@best_genes);
+  print &datetime . ' ' . $ui_radius . " Round $inner_cnt: (S:$b_pop C:$c_pop M:$m_pop) (Gene length Max:$max Avg:$avg StdDev:$stdev)\n";
+  print &datetime . ' ' . $ui_radius . " Best distance: $best_distance\t(diff: $distance_diff)\n";
+}
+
 
 sub radius_strategy() {
-  my $new_strategy = shift ; # L,M,S,T,X
+  my $new_strategy = shift ; # X,L,M,S,T
   my $r = $strategies->{$new_strategy};
   &min_radius($r->[0]);
   &max_radius($r->[1]);

@@ -43,6 +43,9 @@ our @EXPORT_OK = qw/
   &save_images
 
   &scrub_gene
+
+
+  &datetime
   /;
 
 
@@ -181,7 +184,7 @@ sub scrub_gene() {
   my $target_filename = shift;
   my $target = &load_target_image($target_filename);
   my @retarr;
-
+  $| = 1;
 
   sub _helper_single {
     my $gene        = shift;
@@ -203,7 +206,7 @@ sub scrub_gene() {
 
     for my $allele (@$gene) {
       if (! defined($allele)) {
-        print "Found undefined allele. skipping.\n";
+        print "N";
         next;
       }
       my ($x, $y, $rad, $r, $g, $b) = @$allele;
@@ -231,8 +234,6 @@ sub scrub_gene() {
   my $gene_len = @$gene;
   my $chunk_size = 50;
   my $number_of_chunks = ceil($gene_len / $chunk_size);
-  print "Number of alleles in gene: $gene_len\n";
-  print "Splitting up into $number_of_chunks chunks\n";
 
   my $skip = 0;
   for (my $i = 0; $i < $number_of_chunks; $i++) {
@@ -240,7 +241,6 @@ sub scrub_gene() {
       $skip = 1;
     }
 
-    print "Chunk $i\n";
     my @first_layer = ();
     my @middle_layers = ();
     my @last_layer = ();
@@ -284,10 +284,9 @@ sub scrub_gene() {
     #print "# of middle layers: " . scalar @middle_layers . "\n";
     for (my $j = 0; $j < @middle_layers; $j++) {
       my $allele_nr = ($chunk_size * $i) + $j;
-      print "Allele $allele_nr/". ($gene_len - 1) . ':';
 
       if ($skip ) { # don't do last chunks
-        print "\tkeep.\n";
+        print '.';
         push @indices_to_keep, $allele_nr;
         next;
       }
@@ -305,13 +304,15 @@ sub scrub_gene() {
       splice(@middle_layers, $j, 0, $removed_layer);
 
       if ($local_distance > $distance ) { # removing the allele made things worse
-        print "\tkeep.\n";
+        print '.';
         push @indices_to_keep, $allele_nr;
       } else {     #removing the allele made things better or the same
-        print "\tremove.\n";
+        print 'R';
       }
     }
   }
+  print "\n";
+  $| = 0;
 
   @retarr = @{$gene}[@indices_to_keep];
   return \@retarr;
@@ -323,6 +324,7 @@ sub scrub_gene() {
 sub diversify_population() {
   my $population = shift;
   my $target_filename = shift;
+  my $number_of_mutations = shift || 20;
   my @new_population;
 
   print "Diversifying " . scalar @$population . " genes.\n";
@@ -340,7 +342,7 @@ sub diversify_population() {
     my $distance = $result->Get('error');
     print ": Improve from $distance to ";
 
-    my $more_mutations_wanted = 20;
+    my $more_mutations_wanted = $number_of_mutations;
     while ($more_mutations_wanted) {
       my $allele = &generate_allele;
       my ($x, $y, $rad, $r, $g, $b) = @$allele;
@@ -574,6 +576,14 @@ sub show_population() {
 }
 
 
+
+sub datetime {
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+  my $y = $year + 1900;
+#  return "${y}/${mon}/${mday}-${hour}:${min}:${sec}";
+
+  return sprintf '%4d/%02d/%02d-%02d:%02d:%02d', $year+1900, $mon, $mday, $hour, $min, $sec;
+}
 
 
 
