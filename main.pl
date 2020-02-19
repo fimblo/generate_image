@@ -148,13 +148,7 @@ my $tot = $s+$c+$m;
 my $strategy = $DEFAULT_STRATEGY;
 $distance_threshold = &radius_strategy($strategy);
 my $radius_counter = $l_map->{$strategy};
-my $ui_radius = $strategy . ' ';
-
-# Giving the main loop a sense of history
-my $prev_best_distance = 1;
-my $prev_best_image;
-my @distance_history = qw/1/;
-
+my $ui_radius = $strategy;
 
 # Initial settings for the genes
 &gene_start_length(10);
@@ -162,13 +156,18 @@ my @distance_history = qw/1/;
 # Let's seed the population and get started.
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
+# Giving the main loop a sense of history
+my $prev_best_distance = &best_distance;
+my $prev_best_image;
+my @distance_history = qw/1/;
+my $inner_cnt = 0;
+my $outer_cnt = 0;
+my $lsum = 1;
+my $has_changed = 0;
 
 # --------------------------------------------------
 # Outer loop
 print &datetime . " Starting...\n";
-my $inner_cnt = 0;
-my $outer_cnt = 0;
-my $lsum = 1;
 while (1) {
 
   my @best_genes;
@@ -180,7 +179,6 @@ while (1) {
     my $images = &create_images($population);
 
     # get indices of best genes in population arref
-    print &datetime . " Getting best indices\n";
     my $best_indices = &get_best_gene_indices($images, $target_image_filename);
 
     # Prep the next generation of genes
@@ -193,7 +191,8 @@ while (1) {
     # Output status for user
     my $best_distance = &best_distance();
     my $distance_diff = $prev_best_distance - $best_distance;
-    &status_to_user({ previous_best_distance  => $prev_best_distance,
+    $distance_diff = 0 if (abs($distance_diff) < 0.0000000000000002);
+    &status_to_user({ distance_diff  => $distance_diff,
                       best_genes  => \@best_genes,
                       mutant_population  => scalar @$mutants,
                       child_population  => scalar @$children });
@@ -216,6 +215,7 @@ while (1) {
         &save_image($comparison, "output/$$/z_comparison.png");
       }
       $prev_best_image = $best_image_so_far;
+      $has_changed = 1;         # mark that a change has happened
     }
     &save_gene(
                { distance => $best_distance,
@@ -235,14 +235,16 @@ while (1) {
   }
 
   # scrub
-  print &datetime . " Scrubbing dead alleles from population.\n";
-  my @scrubbed_genes;
-  for my $g (@best_genes) {
-    my $scrubbed = &scrub_gene($g, $target_image_filename);
-    push @scrubbed_genes, $scrubbed;
+  if ($has_changed) {
+    print &datetime . " Scrubbing dead alleles from population.\n";
+    my @scrubbed_genes;
+    for my $g (@best_genes) {
+      my $scrubbed = &scrub_gene($g, $target_image_filename);
+      push @scrubbed_genes, $scrubbed;
+    }
+    $population = \@scrubbed_genes;
+    $has_changed = 0;         # reset the flag
   }
-  $population = \@scrubbed_genes;
-
 
 
   # diversify once every 20 outer cycles
@@ -277,7 +279,7 @@ sub status_to_user {
   my $arg = shift;
   my @best_genes = @{$arg->{best_genes}};
   my $best_distance = &best_distance();
-  my $distance_diff = $arg->{previous_best_distance} - $best_distance;
+  my $distance_diff = $arg->{distance_diff};
   my $b_pop = scalar @best_genes;
   my $m_pop = $arg->{mutant_population};
   my $c_pop = $arg->{child_population};

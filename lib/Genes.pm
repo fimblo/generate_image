@@ -442,6 +442,7 @@ sub generate_genes_from_seed() {
 
   my $population    = $VAR1->{'gene'};
   my $seed_distance = $VAR1->{'distance'};
+  &best_distance($seed_distance);
   my $size = scalar @$population;
 
   print "$size genes loaded. The best gene has distance '$seed_distance' to image.\n";
