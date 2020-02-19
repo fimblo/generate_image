@@ -10,6 +10,10 @@ use warnings;
 use strict;
 use Getopt::Long;
 use File::Basename;
+use sigtrap qw(handler my_signal_handler normal-signals
+               stack-trace error-signals);
+
+
 
 BEGIN { push @INC, 'lib/'}
 
@@ -265,9 +269,6 @@ while (1) {
 }
 
 
-print "\nOutput saved to output/$$\n";
-
-
 
 # --------------------------------------------------
 # extra subs
@@ -336,4 +337,10 @@ sub stdev{
   }
   my $std = ($sqtotal / (@data - 1)) ** 0.5;
   return $std;
+}
+
+sub my_signal_handler {
+  print "\n\nOutput saved to 'output/$$'.\n";
+  die "Signal caught: '$!'" if $!;
+  exit 0;
 }
