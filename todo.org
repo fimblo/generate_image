@@ -30,6 +30,9 @@
 
 ** TODO prefix internal subs with underscore
 * ideas
+** Remove scrubbing?  
+   It seems research in GP says that introns (what I call dead
+   alleles) are good for the population, increasing the variability.
 ** TODO if given seed, save to same dir as seed
 ** DONE Add datetime to stdout
    CLOSED: [2020-02-18 tis 13:06]
@@ -51,5 +54,36 @@
    - if no real change has occurred for quite some time, it's time to
      diversify the population, then let these diverse populations meet
      again.
+
+
+** TODO A proper rewrite
+*** Alleles/Genes
+   - make an allele one value instead of an array of values
+   - allele value can be 0 - 2047
+   - make the gene consist of an array of alleles
+   - an ALLELE STRING is a series of alleles which describe one geometrical object
+   - Allele string:
+     - first element in an allele string describes the type/length
+       1. circle x,y,R,r,g,b
+       2. rectangle x1,y1,x2,y2,r,g,b
+       3. triangle x1,y1,x2,y2,x3,y3,r,g,b
+     - Use modulo operations to get the numbers to fit.
+     - early optimization: create four modulo tables in the beginning, since lookups are cheaper than modulo calculation
+*** Remove diversification and scrubbing
+    this destroys genetic variation, leading to earlier convergence
+*** Support different kinds of mutations
+    1. Insert mutation
+       Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
+    2. Inversion mutation
+       Select two alleles at random, then invert the alleles values between them (v+1024)
+    3. Scramble mutation
+       Select subset of alleles, and move them to each others' locations without changing them
+    4. Swap mutation
+       Select two alleles and swap their locations
+    5. Reversing mutation
+       Select two alleles at random, then reverse the location order of the alleles between them
+    6. Creep mutation
+       Select an allele and replace it with a random value
+
 
 
