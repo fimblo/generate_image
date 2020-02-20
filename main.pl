@@ -234,8 +234,8 @@ while (1) {
     $inner_cnt++;
   }
 
-  # scrub
-  if ($has_changed) {
+  # scrub and diversify once every 20 outer cycles.
+  if ($outer_cnt > 19) {
     print &datetime . " Scrubbing dead alleles from population.\n";
     my @scrubbed_genes;
     for my $g (@best_genes) {
@@ -244,13 +244,12 @@ while (1) {
     }
     $population = \@scrubbed_genes;
     $has_changed = 0;         # reset the flag
-  }
 
 
-  # diversify once every 20 outer cycles
-  if ($outer_cnt > 20) {
+    # diversify
     print &datetime . " Diversifying population.\n";
-    $population = &diversify_population($population, $target_image_filename, 3);
+    my $diverse_pop = &diversify_population(\@best_genes, $target_image_filename, 3);
+    $population = [@best_genes, @$diverse_pop];
     $outer_cnt = -1;            # since it's incremented at the end of loop
   }
 
