@@ -161,7 +161,6 @@ my $prev_best_distance = &best_distance;
 my $prev_best_image;
 my @distance_history = qw/1/;
 my $inner_cnt = 0;
-my $outer_cnt = 0;
 my $lsum = 1;
 my $has_changed = 0;
 
@@ -234,24 +233,6 @@ while (1) {
     $inner_cnt++;
   }
 
-  # scrub and diversify once every 20 outer cycles.
-  if ($outer_cnt > 19) {
-    print &datetime . " Scrubbing dead alleles from population.\n";
-    my @scrubbed_genes;
-    for my $g (@best_genes) {
-      my $scrubbed = &scrub_gene($g, $target_image_filename);
-      push @scrubbed_genes, $scrubbed;
-    }
-    $population = \@scrubbed_genes;
-    $has_changed = 0;         # reset the flag
-
-
-    # diversify
-    print &datetime . " Diversifying population.\n";
-    my $diverse_pop = &diversify_population(\@best_genes, $target_image_filename, 3);
-    $population = [@best_genes, @$diverse_pop];
-    $outer_cnt = -1;            # since it's incremented at the end of loop
-  }
 
   # change to next radius (X->L->(M->S->T))
   $radius_counter++;
@@ -266,7 +247,6 @@ while (1) {
   # prep for next cycle
   @distance_history = qw/1/;
   $lsum = 1;
-  $outer_cnt++;
 }
 
 
