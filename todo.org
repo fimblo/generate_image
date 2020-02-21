@@ -84,6 +84,17 @@
        Select two alleles at random, then reverse the location order of the alleles between them
     6. Creep mutation
        Select an allele and replace it with a random value
+*** Data Structure of populations
+    - A currentState is a hash with the following key/values
+      - 'generations'   => (optional) scalar with # of iterations
+      - 'individuals'   => ref to array of individuals
+      - 'target'        => (optional) string, with filename of target image
+      - 'best_distance' => scalar with best distance among individuals
 
+    - An individual is a hash, with following key/values
+      - 'gene'          => ref to array of alleles
+      - 'image'         => (optional) ref to imagemagick image object
+      - 'distance'      => (optional) scalar with output from distance function
+      - 
 
 
