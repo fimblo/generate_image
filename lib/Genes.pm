@@ -22,7 +22,7 @@ our @EXPORT_OK = qw/
   &mutate_percent
   &recursive_mutation_percent
   &survival_percent
-
+  &image_dimensions
   &diversify_population
 
   &generate_genes
@@ -41,6 +41,7 @@ our @EXPORT_OK = qw/
   &save_gene
   &save_image
   &save_images
+  &load_target_image
 
   &scrub_gene
 
@@ -83,7 +84,9 @@ sub mate_percent()               { $MATE_PERCENT               = shift || return
 sub max_radius()                 { $MAX_RADIUS                 = shift || return $MAX_RADIUS                 }
 sub min_radius()                 { $MIN_RADIUS                 = shift || return $MIN_RADIUS                 }
 sub image_dimensions() {
-  my ($w, $h) = @_[0,1] || return [$WIDTH, $HEIGHT];
+  my $w = shift;
+  my $h = shift;
+  return $WIDTHXHEIGHT unless ($w);
   ($WIDTH, $HEIGHT) = ($w, $h);
   $WIDTHXHEIGHT = "${WIDTH}x${HEIGHT}";
 }

@@ -39,6 +39,8 @@ use Genes qw/
   &diversify_population
   &scrub_gene
   &datetime
+  &image_dimensions
+  &load_target_image
   /;
 
 # --------------------------------------------------
@@ -143,6 +145,13 @@ my $tot = $s+$c+$m;
 
 # ==================================================
 # MAIN PROGRAM STARTS HERE
+
+# Get target image dimensions
+# image_dimensions;
+my $target_image = &load_target_image($target_image_filename);
+my $width = $target_image->Get('width');
+my $height = $target_image->Get('height');
+&image_dimensions($width, $height);
 
 # Set initial strategy
 my $strategy = $DEFAULT_STRATEGY;
