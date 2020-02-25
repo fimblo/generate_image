@@ -36,8 +36,6 @@ use Genes qw/
   &mate_population
   &save_image
   &save_gene
-  &diversify_population
-  &scrub_gene
   &datetime
   &image_dimensions
   &load_target_image
