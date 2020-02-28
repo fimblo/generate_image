@@ -1,11 +1,11 @@
 #!/usr/bin/perl
 
-use 5.28.0;
+use 5.10.0;
 use warnings;
 use strict;
 use Data::Dumper;
 
-BEGIN { push @INC, '/home/fimblo/wc/github/generate_image/lib/'}
+BEGIN { push @INC, qw|lib/ ../lib/ |}
 
 use Gene;
 

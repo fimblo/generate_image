@@ -1,3 +1,4 @@
+use 5.10.0;
 use warnings;
 use strict;
 package Gene;
