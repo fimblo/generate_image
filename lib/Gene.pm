@@ -161,21 +161,23 @@ sub creep_mutation {
 
 
 
-
-
-
-
-
 sub mate {
   my $self = shift;
   my $mate = shift or die "must supply a mate!";
-  my ($r1, $r2) = map { int rand $_  } ($self->size_of(), $mate->size_of());
+  my $r = int rand $mate->size_of();
+  my @s_all = @{$self->alleles()};
+  my @m_all = @{$mate->alleles()};
 
-  my @first = @{$self->{alleles}}[0   .. $r1];
-  my @last  = @{$mate->{alleles}}[$r2 ..  -1];
-  my @child = (@first, @last);
+  my @first;
+  if ($r < 1) {
+    @first = ();
+  }
+  else {
+    @first = @s_all[0   .. $r-1];
+  }
+  my @last  = @m_all[$r ..  $#m_all];
 
-  return Gene->new( { alleles => \@child } );
+  return Gene->new( { alleles => [ @first, @last ] } );
 }
 
 

@@ -23,7 +23,9 @@ for (keys %$ans) {
   }
 }
 
-
+say "++++++++++++++++++++++++++++++++++++++++++++++++++";
+say "Ocular testing required from here.";
+say "++++++++++++++++++++++++++++++++++++++++++++++++++";
 
 say "Testing Mutation functions";
 my $title = {
@@ -62,3 +64,14 @@ for my $i (1 .. 6) {
   say '   ' . $mutant->to_string();
   say '';
 }
+
+
+say "Testing Mating functionality";
+
+my @alpha_array = ('a' .. 'p');
+my $num_gene = Gene->new({alleles => [ @num_array ]});
+my $alpha_gene = Gene->new({alleles => [ @alpha_array ]});
+my $child = $num_gene->mate($alpha_gene);
+say '  ' . $num_gene->to_string();
+say '  ' . $alpha_gene->to_string();
+say '  ' . $child->to_string();
