@@ -1,24 +1,18 @@
-use 5.10.0;
+use v5.18; # for 'when' and 'say' etc.
 use warnings;
 use strict;
 package Gene;
 
 
-my $max_val = 2048;# maximum value of individual allele
-my $init_alleles = 100;# initial number of alleles
+# --------------------------------------------------
+# CLASS VARIABLES
+#
+my $max_val      = 2048;        # maximum value of individual allele
+my $init_alleles = 100;         # initial number of alleles
 
-sub max_val {
-  my $class = shift;
-  my $arg = shift;
-  $max_val = $arg // return $max_val;
-}
-sub init_alleles {
-  my $class = shift;
-  my $arg = shift;
-  $init_alleles = $arg // return $init_alleles;
-}
-
-# Constructor
+# --------------------------------------------------
+# CLASS METHODS
+#
 sub new {
   my $class = shift;
   my $args = shift;
@@ -42,6 +36,20 @@ sub new {
   return $self;
 }
 
+sub max_val {
+  my $class = shift;
+  my $arg = shift;
+  $max_val = $arg // return $max_val;
+}
+
+sub init_alleles {
+  my $class = shift;
+  my $arg = shift;
+  $init_alleles = $arg // return $init_alleles;
+}
+
+# --------------------------------------------------
+# INSTANCE METHODS
 sub size_of {
   my $self = shift;
   $self->{size_of} = shift || return $self->{size_of};
@@ -58,9 +66,6 @@ sub alleles {
   }
 }
 
-# --------------------------------------------------
-# Possible mutations
-
 # Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
 sub insert_mutation {
   my $self = shift;
@@ -73,8 +78,6 @@ sub insert_mutation {
   return Gene->new({ alleles => \@alleles });
 }
 
-
-
 # Select two alleles at random, then invert the alleles values between them
 sub inversion_mutation {
   my $self = shift;
@@ -86,8 +89,7 @@ sub inversion_mutation {
   my @first;
   if ($r1 < 1) {
     @first = ();
-  }
-  else {
+  } else {
     @first = @alleles[0   .. $r1 - 1];
   }
 
@@ -97,12 +99,10 @@ sub inversion_mutation {
   return Gene->new( {alleles => [@first, @mid, @last] } );
 }
 
-
-
 # Select subset of alleles, and move them to each others' locations without changing them
 sub scramble_mutation {
   my $self = shift;
-  my $pair_count = 5; # change this later
+  my $pair_count = 5;           # change this later
   my $mutant;
   my @alleles = @{ $self->alleles() };
 
@@ -114,8 +114,6 @@ sub scramble_mutation {
 
   return Gene->new( {alleles => [ @alleles ] } );
 }
-
-
 
 # Select two alleles and swap their locations
 sub swap_mutation {
@@ -129,8 +127,6 @@ sub swap_mutation {
 
   return $mutant;
 }
-
-
 
 # Select two alleles at random, then reverse the location order of the alleles between them
 sub reversing_mutation {
@@ -147,7 +143,6 @@ sub reversing_mutation {
   return $mutant;
 }
 
-
 # Select an allele and replace it with a random value
 sub creep_mutation {
   my $self = shift;
@@ -160,8 +155,6 @@ sub creep_mutation {
   return $mutant;
 }
 
-
-
 sub mate {
   my $self = shift;
   my $mate = shift or die "must supply a mate!";
@@ -172,16 +165,13 @@ sub mate {
   my @first;
   if ($r < 1) {
     @first = ();
-  }
-  else {
+  } else {
     @first = @s_all[0   .. $r-1];
   }
   my @last  = @m_all[$r ..  $#m_all];
 
   return Gene->new( { alleles => [ @first, @last ] } );
 }
-
-
 
 sub mutate {
   my $self = shift;
@@ -190,24 +180,20 @@ sub mutate {
   my $mutation_type = shift || rand $no_of_mutations;
   return undef if ($mutation_type > $no_of_mutations or $mutation_type < 1);
 
-  my $retval;
-  if ($mutation_type == 1 ) {
-    $retval = $self->insert_mutation()    ;
-  } elsif ($mutation_type == 2 ) {
-    $retval = $self->inversion_mutation() ;
-  } elsif ($mutation_type == 3 ) {
-    $retval = $self->scramble_mutation()  ;
-  } elsif ($mutation_type == 4 ) {
-    $retval = $self->swap_mutation()      ;
-  } elsif ($mutation_type == 5 ) {
-    $retval = $self->reversing_mutation() ;
-  } elsif ($mutation_type == 6 ) {
-    $retval = $self->creep_mutation()     ;
-  } else {
-    die "Invalid option\n"         ;
+  EXPERIMENTAL: {
+    no warnings;
+    my $retval;
+    for ($mutation_type) {
+      when ($_ == 1) { $retval = $self->insert_mutation()     }
+      when ($_ == 2) { $retval = $self->inversion_mutation()  }
+      when ($_ == 3) { $retval = $self->scramble_mutation()   }
+      when ($_ == 4) { $retval = $self->swap_mutation()       }
+      when ($_ == 5) { $retval = $self->reversing_mutation()  }
+      when ($_ == 6) { $retval = $self->creep_mutation()      }
+      default        { die "Invalid option\n" }
+    }
+    return $retval;
   }
-
-  return $retval;
 }
 
 
