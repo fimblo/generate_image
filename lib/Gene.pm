@@ -23,52 +23,16 @@ sub new {
   my $class = shift;
   my $args = shift;
 
-  # Special case of getting a filename.
-  # In these cases, create a gene from the file.
-  if ($args->{filename}) {
-    my $f = $args->{filename};
-    my $data = Storable::retrieve($f);
-    die "Error in reading data from '$f'.\n"  unless $data;
-
-    # Checking that which was retrieved
-    # First lets check if it's an OO thingie
-    if ('Gene' ne Scalar::Util::blessed($data)) {
-      die "Object from '$f' is not blessed as a 'Gene'.\n";
-    }
-    if (! $data->UNIVERSAL::isa('Gene')) {
-      die "Object from '$f' is not a 'Gene'\n";
-    }
-    if (! $data->UNIVERSAL::can('to_string')) {
-      die "Object from '$f' does not have all the methods it should\n";
-    }
-
-    # Now let's check the data in the object
-    if (! exists $data->{alleles}) {
-      die "No allele key exists in '$f' hash.\n";
-    }
-    if (ref $data->{alleles} ne 'ARRAY') {
-      die "No allele arrayref exists in '$f'.\n";
-    }
-    my $stringified = join '', @{ $data->{alleles} };
-    if ($stringified =~ /\D/) {
-      die "There are non-digits in the allele array.\n";
-    }
-
-    # all good!
-    return $data;
-  }
-
-
-
-  my $self = {
-              size_of       => undef, # current number of alleles in gene
-              alleles       => undef  # ref to array of alleles
-             };
+  my $self = {};
   bless $self, $class;
 
+  if (exists $args->{filename}) {
+    return $self->load_from_disk($args->{filename});
+  }
   if (exists $args->{alleles}) {
-    $self->{alleles} = \@{$args->{alleles}};
+    $self->{alleles} = [ @{$args->{alleles}} ];
   } else {
+    $self->{alleles} = [];
     for (my $i = 0; $i < Gene->init_alleles(); $i++) {
       push @{$self->{alleles}}, int rand Gene->max_val();
     }
@@ -252,7 +216,31 @@ sub load_from_disk {
   my $name = shift // 'gene.txt';
 
   my $data = Storable::retrieve($name);
-  die "Error in reading data from '$name'\n"  unless $data;
+  die "Error in reading data from '$name'.\n"  unless $data;
+
+  # Checking that which was retrieved
+  # First lets check if it's an OO thingie
+  if ('Gene' ne Scalar::Util::blessed($data)) {
+    die "Object from '$name' is not blessed as a 'Gene'.\n";
+  }
+  if (! $data->UNIVERSAL::isa('Gene')) {
+    die "Object from '$name' is not a 'Gene'\n";
+  }
+  if (! $data->UNIVERSAL::can('to_string')) {
+    die "Object from '$name' does not have all the methods it should\n";
+  }
+
+  # Now let's check the data in the object
+  if (! exists $data->{alleles}) {
+    die "No allele key exists in '$name' hash.\n";
+  }
+  if (ref $data->{alleles} ne 'ARRAY') {
+    die "No allele arrayref exists in '$name'.\n";
+  }
+  my $stringified = join '', @{ $data->{alleles} };
+  if ($stringified =~ /\D/) {
+    die "There are non-digits in the allele array.\n";
+  }
 
   return $data;
 }
