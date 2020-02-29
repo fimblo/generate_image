@@ -4,6 +4,7 @@ use strict;
 use diagnostics;
 use Storable 'retrieve';
 use Scalar::Util 'blessed';
+use Drawing;
 
 package Individual;
 use parent 'Storable';
@@ -71,6 +72,22 @@ sub alleles {
   }
 }
 
+sub draw {
+  my $self = shift;
+
+  my $d = Drawing->new();
+  $d->image({ alleles => $self->alleles() });
+
+  $self->{drawing} = $d;
+  return $d;
+}
+
+sub fitness {
+  my $self = shift;
+  return $self->{drawing}->fitness();
+}
+
+
 sub mate {
   my $self = shift;
   my $mate = shift or die "must supply a mate!";
@@ -93,22 +110,22 @@ sub mutate {
   my $self = shift;
 
   my $no_of_mutations = 6;
-  my $mutation_type = shift || rand $no_of_mutations;
-  return undef if ($mutation_type > $no_of_mutations or $mutation_type < 1);
+  my $mutation_type = shift // int rand $no_of_mutations;
+  die "Invalid mutation type\n" if ($mutation_type > $no_of_mutations);
 
   EXPERIMENTAL: {
     no warnings;
-    my $retval;
+    my $mutant;
     for ($mutation_type) {
-      when ($_ == 1) { $retval = $self->insert_mutation()     }
-      when ($_ == 2) { $retval = $self->inversion_mutation()  }
-      when ($_ == 3) { $retval = $self->scramble_mutation()   }
-      when ($_ == 4) { $retval = $self->swap_mutation()       }
-      when ($_ == 5) { $retval = $self->reversing_mutation()  }
-      when ($_ == 6) { $retval = $self->creep_mutation()      }
+      when ($_ == 0) { $mutant = $self->insert_mutation()     }
+      when ($_ == 1) { $mutant = $self->inversion_mutation()  }
+      when ($_ == 2) { $mutant = $self->scramble_mutation()   }
+      when ($_ == 3) { $mutant = $self->swap_mutation()       }
+      when ($_ == 4) { $mutant = $self->reversing_mutation()  }
+      when ($_ == 5) { $mutant = $self->creep_mutation()      }
       default        { die "Invalid option\n" }
     }
-    return $retval;
+    return $mutant;
   }
 }
 
