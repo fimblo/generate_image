@@ -73,6 +73,47 @@ sub alleles {
   }
 }
 
+sub mate {
+  my $self = shift;
+  my $mate = shift or die "must supply a mate!";
+  my $r = int rand $mate->size_of();
+  my @s_all = @{$self->alleles()};
+  my @m_all = @{$mate->alleles()};
+
+  my @first;
+  if ($r < 1) {
+    @first = ();
+  } else {
+    @first = @s_all[0   .. $r-1];
+  }
+  my @last  = @m_all[$r ..  $#m_all];
+
+  return Individual->new( { alleles => [ @first, @last ] } );
+}
+
+sub mutate {
+  my $self = shift;
+
+  my $no_of_mutations = 6;
+  my $mutation_type = shift || rand $no_of_mutations;
+  return undef if ($mutation_type > $no_of_mutations or $mutation_type < 1);
+
+  EXPERIMENTAL: {
+    no warnings;
+    my $retval;
+    for ($mutation_type) {
+      when ($_ == 1) { $retval = $self->insert_mutation()     }
+      when ($_ == 2) { $retval = $self->inversion_mutation()  }
+      when ($_ == 3) { $retval = $self->scramble_mutation()   }
+      when ($_ == 4) { $retval = $self->swap_mutation()       }
+      when ($_ == 5) { $retval = $self->reversing_mutation()  }
+      when ($_ == 6) { $retval = $self->creep_mutation()      }
+      default        { die "Invalid option\n" }
+    }
+    return $retval;
+  }
+}
+
 # Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
 sub insert_mutation {
   my $self = shift;
@@ -160,47 +201,6 @@ sub creep_mutation {
   $mutant->{alleles}[$i] = int rand Individual->max_val();
 
   return $mutant;
-}
-
-sub mate {
-  my $self = shift;
-  my $mate = shift or die "must supply a mate!";
-  my $r = int rand $mate->size_of();
-  my @s_all = @{$self->alleles()};
-  my @m_all = @{$mate->alleles()};
-
-  my @first;
-  if ($r < 1) {
-    @first = ();
-  } else {
-    @first = @s_all[0   .. $r-1];
-  }
-  my @last  = @m_all[$r ..  $#m_all];
-
-  return Individual->new( { alleles => [ @first, @last ] } );
-}
-
-sub mutate {
-  my $self = shift;
-
-  my $no_of_mutations = 6;
-  my $mutation_type = shift || rand $no_of_mutations;
-  return undef if ($mutation_type > $no_of_mutations or $mutation_type < 1);
-
-  EXPERIMENTAL: {
-    no warnings;
-    my $retval;
-    for ($mutation_type) {
-      when ($_ == 1) { $retval = $self->insert_mutation()     }
-      when ($_ == 2) { $retval = $self->inversion_mutation()  }
-      when ($_ == 3) { $retval = $self->scramble_mutation()   }
-      when ($_ == 4) { $retval = $self->swap_mutation()       }
-      when ($_ == 5) { $retval = $self->reversing_mutation()  }
-      when ($_ == 6) { $retval = $self->creep_mutation()      }
-      default        { die "Invalid option\n" }
-    }
-    return $retval;
-  }
 }
 
 sub save_to_disk {
