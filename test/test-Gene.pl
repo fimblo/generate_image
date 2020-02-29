@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-use 5.10.0;
+use v5.18;
 use warnings;
 use strict;
 
@@ -21,18 +21,37 @@ for (keys %$ans) {
   }
 }
 
-say "Save and restore from disk";
+say "Save gene to disk.";
 my $filename ="/tmp/test-Gene-saveload-$$.txt";
 $gene = Gene->new({ alleles => [ 1, 2, 3, 4, 5]});
 $gene->save_to_disk($filename);
+if (-e $filename) {
+  say "  OK: Saved to disk";
+} else {
+  say "  Not OK: Did not save to disk";
+}
+
+say "Retrieve gene from disk - instance method";
 my $retrieved = $gene->load_from_disk($filename);
 my $old_alleles = join(',', @{$gene->alleles()});
 my $new_alleles = join(',', @{$retrieved->alleles()});
 if ($old_alleles eq $new_alleles) {
-  say "  OK: Save-restore."
+  say "  OK: restored nicely."
 } else {
-  say "  NOT OK: Save-restore\n";
+  say "  NOT OK: could not restore";
 }
+
+say "Retrieve gene from disk - class method";
+$retrieved = Gene->new({filename => $filename});
+$old_alleles = join(',', @{$gene->alleles()});
+$new_alleles = join(',', @{$retrieved->alleles()});
+if ($old_alleles eq $new_alleles) {
+  say "  OK: restored nicely."
+} else {
+  say "  NOT OK: could not restore";
+}
+
+
 
 
 

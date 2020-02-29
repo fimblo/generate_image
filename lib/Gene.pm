@@ -2,7 +2,8 @@ use v5.18; # for 'when' and 'say' etc.
 use warnings;
 use strict;
 use diagnostics;
-use Storable qw/ retrieve /;
+use Storable 'retrieve';
+use Scalar::Util 'blessed';
 
 package Gene;
 use parent 'Storable';
@@ -21,6 +22,43 @@ my $init_alleles = 100;         # initial number of alleles
 sub new {
   my $class = shift;
   my $args = shift;
+
+  # Special case of getting a filename.
+  # In these cases, create a gene from the file.
+  if ($args->{filename}) {
+    my $f = $args->{filename};
+    my $data = Storable::retrieve($f);
+    die "Error in reading data from '$f'.\n"  unless $data;
+
+    # Checking that which was retrieved
+    # First lets check if it's an OO thingie
+    if ('Gene' ne Scalar::Util::blessed($data)) {
+      die "Object from '$f' is not blessed as a 'Gene'.\n";
+    }
+    if (! $data->UNIVERSAL::isa('Gene')) {
+      die "Object from '$f' is not a 'Gene'\n";
+    }
+    if (! $data->UNIVERSAL::can('to_string')) {
+      die "Object from '$f' does not have all the methods it should\n";
+    }
+
+    # Now let's check the data in the object
+    if (! exists $data->{alleles}) {
+      die "No allele key exists in '$f' hash.\n";
+    }
+    if (ref $data->{alleles} ne 'ARRAY') {
+      die "No allele arrayref exists in '$f'.\n";
+    }
+    my $stringified = join '', @{ $data->{alleles} };
+    if ($stringified =~ /\D/) {
+      die "There are non-digits in the allele array.\n";
+    }
+
+    # all good!
+    return $data;
+  }
+
+
 
   my $self = {
               size_of       => undef, # current number of alleles in gene
