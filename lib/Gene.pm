@@ -216,31 +216,22 @@ sub load_from_disk {
   my $name = shift // 'gene.txt';
 
   my $data = Storable::retrieve($name);
-  die "Error in reading data from '$name'.\n"  unless $data;
 
-  # Checking that which was retrieved
-  # First lets check if it's an OO thingie
-  if ('Gene' ne Scalar::Util::blessed($data)) {
-    die "Object from '$name' is not blessed as a 'Gene'.\n";
-  }
-  if (! $data->UNIVERSAL::isa('Gene')) {
-    die "Object from '$name' is not a 'Gene'\n";
-  }
-  if (! $data->UNIVERSAL::can('to_string')) {
-    die "Object from '$name' does not have all the methods it should\n";
-  }
-
-  # Now let's check the data in the object
-  if (! exists $data->{alleles}) {
-    die "No allele key exists in '$name' hash.\n";
-  }
-  if (ref $data->{alleles} ne 'ARRAY') {
-    die "No allele arrayref exists in '$name'.\n";
-  }
+  die "Error in reading data from '$name'.\n"
+    unless $data;
+  die "Object from '$name' is not blessed as a 'Gene'.\n"
+    unless 'Gene' eq Scalar::Util::blessed($data);
+  die "Object from '$name' is not a 'Gene'\n"
+    unless $data->UNIVERSAL::isa('Gene');
+  die "Object from '$name' does not have all the methods it should\n"
+    unless $data->UNIVERSAL::can('to_string');
+  die "No allele key exists in '$name' hash.\n"
+    unless exists $data->{alleles};
+  die "No allele arrayref exists in '$name'.\n"
+    unless ref $data->{alleles} eq 'ARRAY';
   my $stringified = join '', @{ $data->{alleles} };
-  if ($stringified =~ /\D/) {
-    die "There are non-digits in the allele array.\n";
-  }
+  die "There are non-digits in the allele array.\n"
+    if $stringified =~ /\D/;
 
   return $data;
 }
