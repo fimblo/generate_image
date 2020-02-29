@@ -5,35 +5,35 @@ use strict;
 
 BEGIN { push @INC, qw|lib/ ../lib/ |}
 
-use Gene;
+use Individual;
 
 say "Constructor test";
-my $gene = Gene->new();
+my $individual = Individual->new();
 my $ans = {
            size_of => 100,
           };
 for (keys %$ans) {
   my $k = $_;
-  if ($gene->{$k} == $ans->{$k}) {
+  if ($individual->{$k} == $ans->{$k}) {
     say "  OK: $k";
   } else {
     say "  NOT OK: $k";
   }
 }
 
-say "Save gene to disk.";
-my $filename ="/tmp/test-Gene-saveload-$$.txt";
-$gene = Gene->new({ alleles => [ 1, 2, 3, 4, 5]});
-$gene->save_to_disk($filename);
+say "Save individual to disk.";
+my $filename ="/tmp/test-Individual-saveload-$$.txt";
+$individual = Individual->new({ alleles => [ 1, 2, 3, 4, 5]});
+$individual->save_to_disk($filename);
 if (-e $filename) {
   say "  OK: Saved to disk";
 } else {
   say "  Not OK: Did not save to disk";
 }
 
-say "Retrieve gene from disk - instance method";
-my $retrieved = $gene->load_from_disk($filename);
-my $old_alleles = join(',', @{$gene->alleles()});
+say "Retrieve individual from disk - instance method";
+my $retrieved = $individual->load_from_disk($filename);
+my $old_alleles = join(',', @{$individual->alleles()});
 my $new_alleles = join(',', @{$retrieved->alleles()});
 if ($old_alleles eq $new_alleles) {
   say "  OK: restored nicely."
@@ -41,9 +41,9 @@ if ($old_alleles eq $new_alleles) {
   say "  NOT OK: could not restore";
 }
 
-say "Retrieve gene from disk - class method";
-$retrieved = Gene->new({filename => $filename});
-$old_alleles = join(',', @{$gene->alleles()});
+say "Retrieve individual from disk - class method";
+$retrieved = Individual->new({filename => $filename});
+$old_alleles = join(',', @{$individual->alleles()});
 $new_alleles = join(',', @{$retrieved->alleles()});
 if ($old_alleles eq $new_alleles) {
   say "  OK: restored nicely."
@@ -79,21 +79,21 @@ my $msg = {
           };
 
 
-# Set artificially small gene pool with small values
+# Set artificially small individual pool with small values
 my @num_array = (0 .. 15);
 my @ident_array = split //, '0' x 16 ;
-Gene->max_val(scalar @num_array);
-Gene->init_alleles(scalar @num_array);
+Individual->max_val(scalar @num_array);
+Individual->init_alleles(scalar @num_array);
 my $mutant;
 
 
 for my $i (1 .. 6) {
-  $gene = Gene->new({alleles => \@num_array, size_of => scalar @num_array});
+  $individual = Individual->new({alleles => \@num_array, size_of => scalar @num_array});
   say ' ' . $title->{$i};
   say ' ' . $msg->{$i};
 
-  $mutant = $gene->mutate($i);
-  say '   ' . $gene->to_string();
+  $mutant = $individual->mutate($i);
+  say '   ' . $individual->to_string();
   say '   ' . $mutant->to_string();
   say '';
 }
@@ -102,10 +102,10 @@ for my $i (1 .. 6) {
 say "Testing Mating functionality";
 
 my @alpha_array = ('a' .. 'p');
-my $num_gene = Gene->new({alleles => [ @num_array ]});
-my $alpha_gene = Gene->new({alleles => [ @alpha_array ]});
-my $child = $num_gene->mate($alpha_gene);
-say '  ' . $num_gene->to_string();
-say '  ' . $alpha_gene->to_string();
+my $num_individual = Individual->new({alleles => [ @num_array ]});
+my $alpha_individual = Individual->new({alleles => [ @alpha_array ]});
+my $child = $num_individual->mate($alpha_individual);
+say '  ' . $num_individual->to_string();
+say '  ' . $alpha_individual->to_string();
 say '  ' . $child->to_string();
 

@@ -5,7 +5,7 @@ use diagnostics;
 use Storable 'retrieve';
 use Scalar::Util 'blessed';
 
-package Gene;
+package Individual;
 use parent 'Storable';
 
 
@@ -33,8 +33,8 @@ sub new {
     $self->{alleles} = [ @{$args->{alleles}} ];
   } else {
     $self->{alleles} = [];
-    for (my $i = 0; $i < Gene->init_alleles(); $i++) {
-      push @{$self->{alleles}}, int rand Gene->max_val();
+    for (my $i = 0; $i < Individual->init_alleles(); $i++) {
+      push @{$self->{alleles}}, int rand Individual->max_val();
     }
   }
 
@@ -82,7 +82,7 @@ sub insert_mutation {
   my $removed = splice @alleles, $r2, 1;
   splice @alleles, $r1, 0, $removed;
 
-  return Gene->new({ alleles => \@alleles });
+  return Individual->new({ alleles => \@alleles });
 }
 
 # Select two alleles at random, then invert the alleles values between them
@@ -91,7 +91,7 @@ sub inversion_mutation {
   my ($r1, $r2) = sort { $a <=> $b } (rand $self->size_of(), rand $self->size_of());
 
   my @alleles = @{$self->alleles()};
-  my $m = Gene->max_val();
+  my $m = Individual->max_val();
 
   my @first;
   if ($r1 < 1) {
@@ -103,7 +103,7 @@ sub inversion_mutation {
   my @mid   = map { $m - $_ } @alleles[$r1 .. $r2 - 1];
   my @last  = @alleles[$r2 .. $#alleles];
 
-  return Gene->new( {alleles => [@first, @mid, @last] } );
+  return Individual->new( {alleles => [@first, @mid, @last] } );
 }
 
 # Select subset of alleles, and move them to each others' locations without changing them
@@ -114,19 +114,19 @@ sub scramble_mutation {
   my @alleles = @{ $self->alleles() };
 
   while ($pair_count-- > 0) {
-    $mutant = Gene->new( { alleles => [ @alleles ] } );
+    $mutant = Individual->new( { alleles => [ @alleles ] } );
     $mutant = $mutant->swap_mutation();
     @alleles = @{ $mutant->alleles() };
   }
 
-  return Gene->new( {alleles => [ @alleles ] } );
+  return Individual->new( {alleles => [ @alleles ] } );
 }
 
 # Select two alleles and swap their locations
 sub swap_mutation {
   my $self = shift;
   my @alleles = @{ $self->alleles() };
-  my $mutant = Gene->new( { alleles => [ @alleles ] } );
+  my $mutant = Individual->new( { alleles => [ @alleles ] } );
   my ($i1, $i2) = (rand $mutant->size_of(), rand $mutant->size_of());
   my ($a1, $a2) = ($mutant->{alleles}[$i1], $mutant->{alleles}[$i2]);
   $mutant->{alleles}[$i1] = $a2;
@@ -138,7 +138,7 @@ sub swap_mutation {
 # Select two alleles at random, then reverse the location order of the alleles between them
 sub reversing_mutation {
   my $self = shift;
-  my $mutant = Gene->new( { alleles => $self->alleles() } );
+  my $mutant = Individual->new( { alleles => $self->alleles() } );
   my ($i1, $i2) = sort (rand $mutant->size_of(), rand $mutant->size_of());
   my $diff = $i2 - $i1;
 
@@ -154,10 +154,10 @@ sub reversing_mutation {
 sub creep_mutation {
   my $self = shift;
   my @alleles = @{ $self->alleles() };
-  my $mutant = Gene->new( { alleles => [ @alleles ] } );
+  my $mutant = Individual->new( { alleles => [ @alleles ] } );
   my $i = rand $self->size_of();
 
-  $mutant->{alleles}[$i] = int rand Gene->max_val();
+  $mutant->{alleles}[$i] = int rand Individual->max_val();
 
   return $mutant;
 }
@@ -177,7 +177,7 @@ sub mate {
   }
   my @last  = @m_all[$r ..  $#m_all];
 
-  return Gene->new( { alleles => [ @first, @last ] } );
+  return Individual->new( { alleles => [ @first, @last ] } );
 }
 
 sub mutate {
@@ -205,7 +205,7 @@ sub mutate {
 
 sub save_to_disk {
   my $self = shift;
-  my $name = shift // 'gene.txt';
+  my $name = shift // 'individual.txt';
 
   my $err = $self->store($name);
   die $err unless $err;
@@ -213,16 +213,16 @@ sub save_to_disk {
 
 sub load_from_disk {
   my $self = shift;
-  my $name = shift // 'gene.txt';
+  my $name = shift // 'individual.txt';
 
   my $data = Storable::retrieve($name);
 
   die "Error in reading data from '$name'.\n"
     unless $data;
-  die "Object from '$name' is not blessed as a 'Gene'.\n"
-    unless 'Gene' eq Scalar::Util::blessed($data);
-  die "Object from '$name' is not a 'Gene'\n"
-    unless $data->UNIVERSAL::isa('Gene');
+  die "Object from '$name' is not blessed as a 'Individual'.\n"
+    unless 'Individual' eq Scalar::Util::blessed($data);
+  die "Object from '$name' is not a 'Individual'\n"
+    unless $data->UNIVERSAL::isa('Individual');
   die "Object from '$name' does not have all the methods it should\n"
     unless $data->UNIVERSAL::can('to_string');
   die "No allele key exists in '$name' hash.\n"
@@ -243,7 +243,7 @@ sub to_string {
   my $all_no = $self->{size_of};
   my $cir_no = int($all_no / 7);
 
-  return "Gene (len:$all_no) (cir:$cir_no) (@{$self->alleles()})";
+  return "Individual (len:$all_no) (cir:$cir_no) (@{$self->alleles()})";
 }
 
 1;
