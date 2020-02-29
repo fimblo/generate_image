@@ -1,9 +1,7 @@
 #!/usr/bin/perl
-
 use 5.10.0;
 use warnings;
 use strict;
-use Data::Dumper;
 
 BEGIN { push @INC, qw|lib/ ../lib/ |}
 
@@ -17,11 +15,27 @@ my $ans = {
 for (keys %$ans) {
   my $k = $_;
   if ($gene->{$k} == $ans->{$k}) {
-    say "OK: $k";
+    say "  OK: $k";
   } else {
-    say "NOT OK: $k";
+    say "  NOT OK: $k";
   }
 }
+
+say "Save and restore from disk";
+my $filename ="/tmp/test-Gene-saveload-$$.txt";
+$gene = Gene->new({ alleles => [ 1, 2, 3, 4, 5]});
+$gene->save_to_disk($filename);
+my $retrieved = $gene->load_from_disk($filename);
+my $old_alleles = join(',', @{$gene->alleles()});
+my $new_alleles = join(',', @{$retrieved->alleles()});
+if ($old_alleles eq $new_alleles) {
+  say "  OK: Save-restore."
+} else {
+  say "  NOT OK: Save-restore\n";
+}
+
+
+
 
 say "++++++++++++++++++++++++++++++++++++++++++++++++++";
 say "Ocular testing required from here.";
@@ -75,3 +89,4 @@ my $child = $num_gene->mate($alpha_gene);
 say '  ' . $num_gene->to_string();
 say '  ' . $alpha_gene->to_string();
 say '  ' . $child->to_string();
+

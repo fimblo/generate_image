@@ -1,7 +1,12 @@
 use v5.18; # for 'when' and 'say' etc.
 use warnings;
 use strict;
+use diagnostics;
+use Storable qw/ retrieve /;
+
 package Gene;
+use parent 'Storable';
+
 
 
 # --------------------------------------------------
@@ -60,7 +65,7 @@ sub alleles {
   my $arg = shift;
   if ($arg) {
     $self->{alleles} = $arg;
-    $self->{size_of} = @{$self->{alleles}};
+    $self->{size_of} = scalar @$arg;
   } else {
     return $self->{alleles};
   }
@@ -196,7 +201,23 @@ sub mutate {
   }
 }
 
+sub save_to_disk {
+  my $self = shift;
+  my $name = shift // 'gene.txt';
 
+  my $err = $self->store($name);
+  die $err unless $err;
+}
+
+sub load_from_disk {
+  my $self = shift;
+  my $name = shift // 'gene.txt';
+
+  my $data = Storable::retrieve($name);
+  die "Error in reading data from '$name'\n"  unless $data;
+
+  return $data;
+}
 
 sub to_string {
   my $self = shift;
