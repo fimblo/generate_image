@@ -13,8 +13,8 @@ use parent 'Storable';
 # --------------------------------------------------
 # CLASS VARIABLES
 #
-my $max_val      = 2048;        # maximum value of individual allele
-my $init_alleles = 100;         # initial number of alleles
+my $max_val      = 2048;  # maximum value of individual allele
+my $init_alleles = 1000;  # initial number of alleles
 
 # --------------------------------------------------
 # CLASS METHODS
@@ -44,14 +44,12 @@ sub new {
 }
 
 sub max_val {
-  my $class = shift;
-  my $arg = shift;
+  my $class = shift; my $arg = shift;
   $max_val = $arg // return $max_val;
 }
 
 sub init_alleles {
-  my $class = shift;
-  my $arg = shift;
+  my $class = shift; my $arg = shift;
   $init_alleles = $arg // return $init_alleles;
 }
 
