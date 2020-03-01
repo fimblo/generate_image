@@ -10,7 +10,7 @@ use Individual;
 say "Constructor test";
 my $individual = Individual->new();
 my $ans = {
-           size_of => 100,
+           number_of_alleles => 100,
           };
 for (keys %$ans) {
   my $k = $_;
@@ -88,7 +88,7 @@ my $mutant;
 
 
 for my $i (1 .. 6) {
-  $individual = Individual->new({alleles => \@num_array, size_of => scalar @num_array});
+  $individual = Individual->new({alleles => \@num_array, number_of_alleles => scalar @num_array});
   say ' ' . $title->{$i};
   say ' ' . $msg->{$i};
 

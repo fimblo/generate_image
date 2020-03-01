@@ -24,7 +24,9 @@ sub new {
   my $class = shift;
   my $args = shift;
 
-  my $self = {};
+  my $self = {
+              previous_operation => 'G'
+             };
   bless $self, $class;
 
   if (exists $args->{filename}) {
@@ -39,7 +41,7 @@ sub new {
     }
   }
 
-  $self->{size_of} = @{$self->{alleles}};
+  $self->{number_of_alleles} = @{$self->{alleles}};
 
   return $self;
 }
@@ -56,9 +58,13 @@ sub init_alleles {
 
 # --------------------------------------------------
 # INSTANCE METHODS
-sub size_of {
+sub number_of_alleles {
   my $self = shift;
-  $self->{size_of} = shift || return $self->{size_of};
+  $self->{number_of_alleles} = shift || return $self->{number_of_alleles};
+}
+sub previous_operation {
+  my $self = shift;
+  $self->{previous_operation} = shift || return $self->{previous_operation};
 }
 
 sub alleles {
@@ -66,7 +72,7 @@ sub alleles {
   my $arg = shift;
   if ($arg) {
     $self->{alleles} = $arg;
-    $self->{size_of} = scalar @$arg;
+    $self->{number_of_alleles} = scalar @$arg;
   } else {
     return $self->{alleles};
   }
@@ -91,7 +97,7 @@ sub fitness {
 sub mate {
   my $self = shift;
   my $mate = shift or die "must supply a mate!";
-  my $r = int rand $mate->size_of();
+  my $r = int rand $mate->number_of_alleles();
   my @s_all = @{$self->alleles()};
   my @m_all = @{$mate->alleles()};
 
@@ -103,6 +109,7 @@ sub mate {
   }
   my @last  = @m_all[$r ..  $#m_all];
 
+  $self->previous_operation('M');
   return Individual->new( { alleles => [ @first, @last ] } );
 }
 
@@ -132,19 +139,20 @@ sub mutate {
 # Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
 sub insert_mutation {
   my $self = shift;
-  my ($r1, $r2) = sort { $a <=> $b } (rand $self->size_of(), rand $self->size_of());
+  my ($r1, $r2) = sort { $a <=> $b } (rand $self->number_of_alleles(), rand $self->number_of_alleles());
   my @alleles = @{$self->alleles()};
 
   my $removed = splice @alleles, $r2, 1;
   splice @alleles, $r1, 0, $removed;
 
+  $self->previous_operation(1);
   return Individual->new({ alleles => \@alleles });
 }
 
 # Select two alleles at random, then invert the alleles values between them
 sub inversion_mutation {
   my $self = shift;
-  my ($r1, $r2) = sort { $a <=> $b } (rand $self->size_of(), rand $self->size_of());
+  my ($r1, $r2) = sort { $a <=> $b } (rand $self->number_of_alleles(), rand $self->number_of_alleles());
 
   my @alleles = @{$self->alleles()};
   my $m = Individual->max_val();
@@ -159,6 +167,7 @@ sub inversion_mutation {
   my @mid   = map { $m - $_ } @alleles[$r1 .. $r2 - 1];
   my @last  = @alleles[$r2 .. $#alleles];
 
+  $self->previous_operation(2);
   return Individual->new( {alleles => [@first, @mid, @last] } );
 }
 
@@ -175,6 +184,7 @@ sub scramble_mutation {
     @alleles = @{ $mutant->alleles() };
   }
 
+  $self->previous_operation(3);
   return Individual->new( {alleles => [ @alleles ] } );
 }
 
@@ -183,11 +193,12 @@ sub swap_mutation {
   my $self = shift;
   my @alleles = @{ $self->alleles() };
   my $mutant = Individual->new( { alleles => [ @alleles ] } );
-  my ($i1, $i2) = (rand $mutant->size_of(), rand $mutant->size_of());
+  my ($i1, $i2) = (rand $mutant->number_of_alleles(), rand $mutant->number_of_alleles());
   my ($a1, $a2) = ($mutant->{alleles}[$i1], $mutant->{alleles}[$i2]);
   $mutant->{alleles}[$i1] = $a2;
   $mutant->{alleles}[$i2] = $a1;
 
+  $self->previous_operation(4);
   return $mutant;
 }
 
@@ -195,7 +206,7 @@ sub swap_mutation {
 sub reversing_mutation {
   my $self = shift;
   my $mutant = Individual->new( { alleles => $self->alleles() } );
-  my ($i1, $i2) = sort (rand $mutant->size_of(), rand $mutant->size_of());
+  my ($i1, $i2) = sort (rand $mutant->number_of_alleles(), rand $mutant->number_of_alleles());
   my $diff = $i2 - $i1;
 
   my @alleles = @{ $mutant->alleles() };
@@ -203,6 +214,7 @@ sub reversing_mutation {
   splice @alleles, $i1, 0, @reversed;
   $mutant->alleles(\@alleles);
 
+  $self->previous_operation(5);
   return $mutant;
 }
 
@@ -211,10 +223,11 @@ sub creep_mutation {
   my $self = shift;
   my @alleles = @{ $self->alleles() };
   my $mutant = Individual->new( { alleles => [ @alleles ] } );
-  my $i = rand $self->size_of();
+  my $i = rand $self->number_of_alleles();
 
   $mutant->{alleles}[$i] = int rand Individual->max_val();
 
+  $self->previous_operation(6);
   return $mutant;
 }
 
@@ -222,7 +235,8 @@ sub save_to_disk {
   my $self = shift;
   my $name = shift // 'individual.txt';
 
-  my $err = $self->store($name);
+  $self->{drawing}->save_image({filename => "$$-${name}.png"});
+  my $err = $self->store("$$-${name}.txt");
   die $err unless $err;
 }
 
@@ -255,7 +269,7 @@ sub to_string {
   my $self = shift;
   my $arg = shift;
 
-  my $all_no = $self->{size_of};
+  my $all_no = $self->{number_of_alleles};
   my $cir_no = int($all_no / 7);
 
   return "Individual (len:$all_no) (cir:$cir_no) (@{$self->alleles()})";

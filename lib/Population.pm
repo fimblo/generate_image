@@ -42,7 +42,10 @@ sub new {
   my $class = shift;
   my $args = shift;
 
-  my $self = {};
+  my $self = {
+              population => [],
+              best => [],
+             };
   bless $self, $class;
 
   die "Target image filename required"
@@ -66,6 +69,14 @@ sub new {
   $mnr = int($pop_size * $m / $tot);
 
   return $self;
+}
+
+# --------------------------------------------------
+# Instance methods
+
+sub best {
+  my $self = shift; my $arg = shift;
+  $self->{best} = $arg // return $self->{best};
 }
 
 sub generate_individuals {
@@ -106,8 +117,11 @@ sub prep_next_generation {
   # get the best
   @sorted_keys = sort {$a<=>$b} keys %$pop_by_fitness;
   for my $k (@sorted_keys[0 .. $bnr]) {
-    push @best, $pop_by_fitness->{$k};
+    $individual = $pop_by_fitness->{$k};
+    $individual->previous_operation('.');
+    push @best, $individual;
   }
+  $self->best( [ @best ] );
 
   # create children
   for (my $i = 0; $i < $cnr; $i++) {
@@ -124,7 +138,7 @@ sub prep_next_generation {
 
   $self->{population} = [ @best, @children, @mutants ];
 
-  return $sorted_keys[0];
+  return [ @best ];
 }
 
 1;
