@@ -44,6 +44,7 @@ sub new {
 
   my $self = {
               population => [],
+              prev_best_ops => {},
               best => [],
              };
   bless $self, $class;
@@ -112,16 +113,23 @@ sub prep_next_generation {
     $pop_by_fitness->{$f} = $individual;
   }
 
-  my (@sorted_keys, @best, @children, @mutants);
+  my ($best_ops, @sorted_keys, @best, @children, @mutants);
 
   # get the best
   @sorted_keys = sort {$a<=>$b} keys %$pop_by_fitness;
   for my $k (@sorted_keys[0 .. $bnr]) {
     $individual = $pop_by_fitness->{$k};
-    $individual->previous_operation('.');
+
+    my $id = $individual->id();
+    if (exists $self->{prev_best_ops}->{$id} and
+        $self->{prev_best_ops}->{$id} eq $individual->previous_operation() ) {
+      $individual->previous_operation('.');
+    }
+    $best_ops->{$id} = $individual->previous_operation();
     push @best, $individual;
   }
   $self->best( [ @best ] );
+  $self->{prev_best_ops} = $best_ops;
 
   # create children
   for (my $i = 0; $i < $cnr; $i++) {

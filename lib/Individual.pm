@@ -17,6 +17,7 @@ use parent 'Storable';
 my $max_val      = 2048;  # maximum value of individual allele
 my $init_alleles = 1000;  # initial number of alleles
 my $max_alleles  = 2000;  # maximum number of alleles
+my $id           = 'a';   # start id for each Individual created
 
 # --------------------------------------------------
 # CLASS METHODS
@@ -26,7 +27,8 @@ sub new {
   my $args = shift;
 
   my $self = {
-              previous_operation => 'G'
+              previous_operation => 'G',
+              id => $id++
              };
   bless $self, $class;
 
@@ -64,13 +66,18 @@ sub max_alleles {
 
 # --------------------------------------------------
 # INSTANCE METHODS
+
+sub id {
+  my $self = shift; my $arg = shift;
+  $self->{id} = shift // return $self->{id};
+}
 sub number_of_alleles {
   my $self = shift;
-  $self->{number_of_alleles} = shift || return $self->{number_of_alleles};
+  $self->{number_of_alleles} = shift // return $self->{number_of_alleles};
 }
 sub previous_operation {
   my $self = shift;
-  $self->{previous_operation} = shift || return $self->{previous_operation};
+  $self->{previous_operation} = shift // return $self->{previous_operation};
 }
 
 sub alleles {
@@ -123,7 +130,7 @@ sub mate {
   }
   my $child = Individual->new({ alleles => [ @alleles ]});
 
-  $self->previous_operation('M');
+  $child->previous_operation('M');
   return $child;
 }
 
@@ -153,7 +160,9 @@ sub mutate {
     my @m_alleles = @{$mutant->alleles()};
     if (scalar(@m_alleles) > Individual->max_alleles()) {
       splice @m_alleles, Individual->max_alleles();
+      my $po = $mutant->previous_operation();
       $mutant = Individual->new({ alleles => [ @m_alleles ]});
+      $mutant->previous_operation($po);
     }
     return $mutant;
   }
@@ -168,8 +177,9 @@ sub insert_mutation {
   my $removed = splice @alleles, $r2, 1;
   splice @alleles, $r1, 0, $removed;
 
-  $self->previous_operation(1);
-  return Individual->new({ alleles => \@alleles });
+  my $mutant = Individual->new({ alleles => \@alleles });
+  $mutant->previous_operation(1);
+  return $mutant;
 }
 
 # Select two alleles at random, then invert the alleles values between them
@@ -190,8 +200,9 @@ sub inversion_mutation {
   my @mid   = map { $m - $_ } @alleles[$r1 .. $r2 - 1];
   my @last  = @alleles[$r2 .. $#alleles];
 
-  $self->previous_operation(2);
-  return Individual->new( {alleles => [@first, @mid, @last] } );
+  my $mutant = Individual->new( {alleles => [@first, @mid, @last] } );
+  $mutant->previous_operation(2);
+  return $mutant;
 }
 
 # Select subset of alleles, and move them to each others' locations without changing them
@@ -207,8 +218,9 @@ sub scramble_mutation {
     @alleles = @{ $mutant->alleles() };
   }
 
-  $self->previous_operation(3);
-  return Individual->new( {alleles => [ @alleles ] } );
+  $mutant = Individual->new( {alleles => [ @alleles ] } );
+  $mutant->previous_operation(3);
+  return $mutant;
 }
 
 # Select two alleles and swap their locations
@@ -221,7 +233,7 @@ sub swap_mutation {
   $mutant->{alleles}[$i1] = $a2;
   $mutant->{alleles}[$i2] = $a1;
 
-  $self->previous_operation(4);
+  $mutant->previous_operation(4);
   return $mutant;
 }
 
@@ -237,7 +249,7 @@ sub reversing_mutation {
   splice @alleles, $i1, 0, @reversed;
   $mutant->alleles(\@alleles);
 
-  $self->previous_operation(5);
+  $mutant->previous_operation(5);
   return $mutant;
 }
 
@@ -250,7 +262,7 @@ sub creep_mutation {
 
   $mutant->{alleles}[$i] = int rand Individual->max_val();
 
-  $self->previous_operation(6);
+  $mutant->previous_operation(6);
   return $mutant;
 }
 
@@ -262,8 +274,9 @@ sub grow_mutation {
   my $pos = int rand scalar @alleles;
   splice @alleles, $pos, 0, $new_allele;
 
-  $self->previous_operation(7);
-  return Individual->new( { alleles => [ @alleles ]} );
+  my $mutant = Individual->new( { alleles => [ @alleles ]} );
+  $mutant->previous_operation(7);
+  return $mutant;
 }
 
 # Shrink allele string
@@ -273,8 +286,9 @@ sub shrink_mutation {
   my $pos = int rand scalar @alleles;
   splice @alleles, $pos, 1;
 
-  $self->previous_operation(8);
-  return Individual->new( { alleles => [ @alleles ]} );
+  my $mutant = Individual->new( { alleles => [ @alleles ]} );
+  $mutant->previous_operation(8);
+  return $mutant;
 }
 
 sub save_to_disk {

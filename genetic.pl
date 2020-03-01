@@ -22,12 +22,31 @@ my $population = Population->new({
 
 $population->generate_individuals();
 
+
+# Main loop
 my $i = 1;
 my $prev_best = 1;
-while () {
+my $curr_best = 1;
+while ($curr_best > 0.01) {
   $population->create_images();
   my @best_indivs = @{$population->prep_next_generation()};
 
+  $curr_best = &show_status_update([@best_indivs]);
+
+  if ($curr_best < $prev_best) {
+    $best_indivs[0]->save_to_disk(sprintf "%06d", $i);
+    $prev_best = $curr_best;
+  }
+
+  $i++;
+}
+
+
+
+
+sub show_status_update {
+  my $arg = shift;
+  my @best_indivs = @$arg;
 
   my (@fitness, @allele_count, $operations);
   for my $bi (@best_indivs) {
@@ -43,17 +62,25 @@ while () {
   my $avg_a = sprintf "%8.2f", average(@allele_count);
   my $stdev_a = sprintf "%8.2f", stdev(@allele_count);
 
-  say "Gen $gen_i: Fitness(B:$best_f A:$avg_f S:$stdev_f)";
-  say "          Number of Alleles(B:$best_a A:$avg_a S:$stdev_a)";
-  say "          $operations";
-
-  if ($fitness[0] < $prev_best) {
-    $best_indivs[0]->save_to_disk(sprintf "%06d", $i);
-    $prev_best = $fitness[0];
+  my $prev_f;
+  if ($prev_best - $fitness[0] < 0.000000000001) {
+    $prev_f = 0;
+  } else {
+    $prev_f = sprintf "%.8f", $fitness[0] - $prev_best;
   }
 
-  $i++;
+  my @top_ids = map {$_->id()} @best_indivs[0..2];
+  my $top_id_str = join ', ', @top_ids;
+
+  say "Gen $gen_i: Top three individuals ($top_id_str) Map of Operations: ($operations) ";
+  say "          Fitness (B:$best_f A:$avg_f S:$stdev_f)";
+  say "          Fitness diff for best individual: $prev_f";
+  say "          Number of Alleles (B:$best_a A:$avg_a S:$stdev_a)";
+
+
+  return $fitness[0];
 }
+
 
 sub average{
   my @data = @_;
