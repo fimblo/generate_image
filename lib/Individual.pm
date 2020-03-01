@@ -274,6 +274,8 @@ sub save_to_disk {
   my $name = shift // 'individual.txt';
 
   $self->{drawing}->save_image({filename => "$$-${name}.png"});
+  unlink "latest.png";
+  symlink "$$-${name}.png", "latest.png";
   my $err = $self->store("$$-${name}.txt");
   die $err unless $err;
 }
