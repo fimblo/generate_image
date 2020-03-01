@@ -85,6 +85,7 @@ sub image {
   my $circles;
 
   while (@alleles) {
+    last if @alleles < 7;
     my ($index, $xl, $yl, $radl, $rl, $gl, $bl, @remains) = @alleles;
     my $x = $xl % $width;       # gotta fix numbers since range there
     my $y = $yl % $height;      # is much bigger than here
