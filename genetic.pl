@@ -12,7 +12,7 @@ use Individual;
 my $target_filename = $ARGV[0];
 
 Individual->init_alleles(20);
-Individual->max_alleles(400);
+Individual->max_alleles(800);
 
 my $population = Population->new({
                                   target_image_filename => $target_filename,

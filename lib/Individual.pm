@@ -116,8 +116,15 @@ sub mate {
   }
   my @last  = @m_all[$r2 ..  $#m_all];
 
+  # Limit size if it's larger than max_alleles
+  my @alleles = (@first, @last);
+  if (scalar(@alleles) > Individual->max_alleles()) {
+    splice @alleles, Individual->max_alleles();
+  }
+  my $child = Individual->new({ alleles => [ @alleles ]});
+
   $self->previous_operation('M');
-  return Individual->new( { alleles => [ @first, @last ] } );
+  return $child;
 }
 
 sub mutate {
@@ -142,6 +149,7 @@ sub mutate {
       default        { die "Invalid option\n" }
     }
 
+    # Limit size if it's larger than max_alleles
     my @m_alleles = @{$mutant->alleles()};
     if (scalar(@m_alleles) > Individual->max_alleles()) {
       splice @m_alleles, Individual->max_alleles();
