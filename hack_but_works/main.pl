@@ -80,6 +80,7 @@ my $helptext = << "EOM";
 
   Optional params
   -s <seed>         # start first iteration with this seed file.
+  -f <fitness>      # target fitness distance (default 0.05)
   -r <ratio>        # population ratio for next generation.
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
@@ -90,6 +91,7 @@ EOM
 # Go through commandline options
 my $target_image_filename = undef;
 my $seed_file = undef;
+my $fitness_target = 0.05;
 my $pool = 10;
 my $ratio = "1:2:1";
 my $help;
@@ -97,6 +99,7 @@ my $help;
 GetOptions(
   "target-file=s" => \$target_image_filename,
   "seed=s"        => \$seed_file,
+  "fitness=s"     => \$fitness_target,
   "pool=i"        => \$pool,
   "ratio=s"       => \$ratio,
   "help"          => \$help,
@@ -106,6 +109,15 @@ GetOptions(
 if (! $target_image_filename or $help ) {
   print $helptext;
   exit 0;
+}
+
+# check fitness target, that it's a number between 0.0001 and 1
+if ($fitness_target !~ /^\d*\.?\d*$/ or not defined $fitness_target) {
+  die "Fitness needs to be a floating point number between 0.001 and 0.999";
+}
+if ($fitness_target < 0.0001 or
+    $fitness_target > 0.999) {
+  die "Fitness needs to be a floating point number between 0.001 and 0.999";
 }
 
 
@@ -162,7 +174,7 @@ my $has_changed = 0;
 # --------------------------------------------------
 # Outer loop
 print &datetime . " Starting...\n";
-while (1) {
+while ($prev_best_distance > $fitness_target) {
 
   my @best_genes;
 
