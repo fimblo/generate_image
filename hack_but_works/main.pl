@@ -80,7 +80,6 @@ my $helptext = << "EOM";
 
   Optional params
   -s <seed>         # start first iteration with this seed file.
-  -i <iter>         # number of iterations. (default 10)
   -r <ratio>        # population ratio for next generation.
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
@@ -91,7 +90,6 @@ EOM
 # Go through commandline options
 my $target_image_filename = undef;
 my $seed_file = undef;
-my $iterations = 10;
 my $pool = 10;
 my $ratio = "1:2:1";
 my $help;
@@ -99,7 +97,6 @@ my $help;
 GetOptions(
   "target-file=s" => \$target_image_filename,
   "seed=s"        => \$seed_file,
-  "iterations=i"  => \$iterations,
   "pool=i"        => \$pool,
   "ratio=s"       => \$ratio,
   "help"          => \$help,
