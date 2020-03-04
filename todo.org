@@ -1,5 +1,5 @@
 * Notes
-  - (setq auto-revert-interval 2)
+  - (setq auto-revert-interval 10)
 * Known problems
 ** for short populations, the mutation ratio bugs out
    $ perl main.pl -t anna.png -p 20 -i 5000 -se output/gen2706-anna/series.014/gene_003365.txt
