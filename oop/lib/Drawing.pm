@@ -65,6 +65,7 @@ sub fitness {
   my $result = $target_image->Compare(image=>$im, metric=>'mae');
   my $diff = $result->Get('error');
 
+  $self->{diff_image} = $result;
   $self->{fitness} = $diff;
   return $diff;
 }
@@ -114,6 +115,14 @@ sub save_image {
   my $args = shift // { filename => 'image.png'};
 
   my $err = $self->{image}->Write($args->{filename});
+  die "$err" if "$err";
+}
+
+sub save_diff_image {
+  my $self = shift;
+  my $args = shift // { filename => 'comparison.png'}
+
+  my $err = $self->{diff_image}->Write($args->{filename});
   die "$err" if "$err";
 }
 
