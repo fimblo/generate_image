@@ -7,48 +7,35 @@ $VERSION = v0.0.1;
 use v5.28.1;
 use warnings;
 use strict;
+use diagnostics;
 
 use Exporter qw(import);
 our @EXPORT_OK = qw/
   &best_distance
-  &debug
+  &create_images
   &gene_start_length
+  &generate_genes
+  &get_best_gene_indices
   &image_dimensions
+  &load_target_image
+  &mate_genes
   &mate_percent
+  &mate_population
   &max_population
   &max_radius
   &min_radius
   &mutate_percent
-  &recursive_mutation_percent
-  &survival_percent
-  &image_dimensions
-
-  &generate_genes
-  &generate_gene
-  &create_images
-  &create_image
-  &get_comparisons_to_target
-  &get_best_gene_indices
-
-  &mate_population
-  &mate_genes
-
   &mutate_population
-  &mutate_genes
-
+  &recursive_mutation_percent
   &save_gene
   &save_image
   &save_images
-  &load_target_image
-
-  &datetime
+  &survival_percent
   /;
 
 
 use Image::Magick;
 use Data::Dumper;
-
-my $DEBUG = 'TRUE';
 
 my $START_POPULATION = 50;
 my $GENE_START_LENGTH = 50;
@@ -67,7 +54,6 @@ my $BEST_DISTANCE = undef;
 # Subs
 
 sub best_distance()              { $BEST_DISTANCE              = shift || return $BEST_DISTANCE              }
-sub debug()                      { $DEBUG                      = shift || return $DEBUG                      }
 sub max_population()             { $START_POPULATION           = shift || return $START_POPULATION           }
 sub gene_start_length()          { $GENE_START_LENGTH          = shift || return $GENE_START_LENGTH          }
 sub survival_percent()           { $SURVIVAL_PERCENT           = shift || return $SURVIVAL_PERCENT           }
@@ -187,11 +173,6 @@ sub dedup_gene() {
     }
   }
   return \@dedup;
-}
-
-sub drint() {
-  my $msg = shift;
-  print "DEBUG: $msg\n" if ($DEBUG eq 'TRUE');
 }
 
 
@@ -377,16 +358,6 @@ sub show_population() {
     }
     print ")\n";
   }
-}
-
-
-
-sub datetime {
-  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-  my $y = $year + 1900;
-#  return "${y}/${mon}/${mday}-${hour}:${min}:${sec}";
-
-  return sprintf '%4d/%02d/%02d-%02d:%02d:%02d', $year+1900, $mon, $mday, $hour, $min, $sec;
 }
 
 

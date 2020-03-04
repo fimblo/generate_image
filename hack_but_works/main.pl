@@ -8,15 +8,23 @@
 use v5.28.1;
 use warnings;
 use strict;
-use Getopt::Long;
-use File::Basename;
+use diagnostics;
+
+# --------------------------------------------------
+# Signal handler
 use sigtrap qw(handler my_signal_handler normal-signals
                stack-trace error-signals);
+my $save_gene_filename;
+sub my_signal_handler {
+  if (defined $save_gene_filename) {
+    print "\n\nMost recent gene saved to '$save_gene_filename'.\n";
+  }
+  die "Signal caught: '$!'" if $!;
+  exit 0;
+}
 
-
-
+# --------------------------------------------------
 BEGIN { push @INC, 'lib/'}
-
 use Genes qw/
   &gene_start_length
   &max_population
@@ -26,19 +34,22 @@ use Genes qw/
   &survival_percent
   &mate_percent
   &mutate_percent
-  &recursive_mutation_percent
   &generate_genes
   &create_images
-  &get_comparisons_to_target
   &get_best_gene_indices
   &mutate_population
   &mate_population
   &save_image
   &save_gene
-  &datetime
   &image_dimensions
   &load_target_image
   /;
+
+# Other modules
+use Getopt::Long;
+use File::Basename;
+
+
 
 # --------------------------------------------------
 # Constants and such
@@ -166,7 +177,6 @@ my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 # Giving the main loop a sense of history
 my $prev_best_distance = &best_distance;
 my $prev_best_image;
-my $save_gene_filename;
 my @distance_history = qw/1/;
 my $inner_cnt = 0;
 my $lsum = 1;
@@ -328,8 +338,11 @@ sub stdev{
   return $std;
 }
 
-sub my_signal_handler {
-  print "\n\Most recent gene saved to '$save_gene_filename'.\n";
-  die "Signal caught: '$!'" if $!;
-  exit 0;
+sub datetime {
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+  my $y = $year + 1900;
+#  return "${y}/${mon}/${mday}-${hour}:${min}:${sec}";
+
+  return sprintf '%4d/%02d/%02d-%02d:%02d:%02d', $year+1900, $mon, $mday, $hour, $min, $sec;
 }
+
