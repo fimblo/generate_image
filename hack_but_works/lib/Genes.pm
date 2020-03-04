@@ -11,7 +11,6 @@ use strict;
 use Exporter qw(import);
 our @EXPORT_OK = qw/
   &best_distance
-  &bgimage
   &debug
   &gene_start_length
   &image_dimensions
@@ -61,14 +60,12 @@ my ($WIDTH, $HEIGHT) = (600, 600);
 my $WIDTHXHEIGHT = $WIDTH . 'x' . $HEIGHT;
 my $MAX_RADIUS = 100;
 my $MIN_RADIUS = 4;
-my $BGIMAGE = 'canvas:white';
 
 my $BEST_DISTANCE = undef;
 
 # --------------------------------------------------
 # Subs
 
-sub bgimage()                    { $BGIMAGE                    = shift || return $BGIMAGE                    }
 sub best_distance()              { $BEST_DISTANCE              = shift || return $BEST_DISTANCE              }
 sub debug()                      { $DEBUG                      = shift || return $DEBUG                      }
 sub max_population()             { $START_POPULATION           = shift || return $START_POPULATION           }
@@ -315,8 +312,8 @@ sub create_image() {
     my $gene = shift;
     my $drawing = Image::Magick->new;
     $drawing->Set(size=>"$WIDTHXHEIGHT");
-    $drawing->Read($BGIMAGE);
     $drawing->Set(magick=>'PNG32');
+    $drawing->Read('canvas:white');
 
     foreach my $allele (@$gene) {
       my ($x, $y, $rad, $r, $g, $b) = @$allele;

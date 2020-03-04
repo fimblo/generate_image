@@ -18,7 +18,6 @@ use sigtrap qw(handler my_signal_handler normal-signals
 BEGIN { push @INC, 'lib/'}
 
 use Genes qw/
-  &bgimage
   &gene_start_length
   &max_population
   &max_radius
@@ -64,7 +63,6 @@ my $DISTANCE_DIFF_THRESHOLD = { X => 0.001,
 };
 my $distance_threshold = 0;         # not a constant. oh well.
 
-my $DEFAULT_BGIMAGE  = 'canvas:white';
 my $DEFAULT_STRATEGY = 'X';
 
 
@@ -86,7 +84,6 @@ my $helptext = << "EOM";
   -r <ratio>        # population ratio for next generation.
                     # Survivor:Children:Mutants (default 1:2:1)
   -p <pool>         # size of gene pool. (default 10)
-  -b <bgimage>      # Start with this image as background (default: white)
   -h                # This help message
 EOM
 
@@ -96,7 +93,6 @@ my $target_image_filename = undef;
 my $seed_file = undef;
 my $iterations = 10;
 my $pool = 10;
-my $bgimage = undef;
 my $ratio = "1:2:1";
 my $help;
 
@@ -105,7 +101,6 @@ GetOptions(
   "seed=s"        => \$seed_file,
   "iterations=i"  => \$iterations,
   "pool=i"        => \$pool,
-  "bgimage=s"     => \$bgimage,
   "ratio=s"       => \$ratio,
   "help"          => \$help,
   ) or die ("bad commandline args\n");
@@ -115,10 +110,6 @@ if (! $target_image_filename or $help ) {
   print $helptext;
   exit 0;
 }
-
-# deal with background option
-$bgimage = $DEFAULT_BGIMAGE unless $bgimage;
-&bgimage($bgimage);
 
 
 unless ($ratio =~ m/^(\d+):(\d+):(\d+)$/) {
