@@ -215,10 +215,13 @@ while (1) {
 
     # Save image and genes as files
     if ($distance_diff != 0) { # save only if there is progress
-      &save_image($best_image_so_far, "output/$$/image_${padding}${inner_cnt}.png");
+      my $fname = "output/$$/image_${padding}${inner_cnt}.png";
+      &save_image($best_image_so_far, $fname);
+      rename "latest.png", 'previous.png';
+      symlink $fname, 'latest.png';
       if ($prev_best_image) {
         my $comparison = $best_image_so_far->Compare(image=>$prev_best_image, metric=>'mae');
-        &save_image($comparison, "output/$$/z_comparison.png");
+        &save_image($comparison, "comparison.png");
       }
       $prev_best_image = $best_image_so_far;
       $has_changed = 1;         # mark that a change has happened
