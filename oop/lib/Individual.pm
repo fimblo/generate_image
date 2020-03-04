@@ -141,31 +141,28 @@ sub mutate {
   my $mutation_type = shift // int rand $no_of_mutations;
   die "Invalid mutation type\n" if ($mutation_type > $no_of_mutations);
 
-  EXPERIMENTAL: {
-    no warnings;
-    my $mutant;
-    for ($mutation_type) {
-      when ($_ == 0) { $mutant = $self->insert_mutation()     }
-      when ($_ == 1) { $mutant = $self->inversion_mutation()  }
-      when ($_ == 2) { $mutant = $self->scramble_mutation()   }
-      when ($_ == 3) { $mutant = $self->swap_mutation()       }
-      when ($_ == 4) { $mutant = $self->reversing_mutation()  }
-      when ($_ == 5) { $mutant = $self->creep_mutation()      }
-      when ($_ == 6) { $mutant = $self->grow_mutation()       }
-      when ($_ == 7) { $mutant = $self->shrink_mutation()     }
-      default        { die "Invalid option\n" }
-    }
 
-    # Limit size if it's larger than max_alleles
-    my @m_alleles = @{$mutant->alleles()};
-    if (scalar(@m_alleles) > Individual->max_alleles()) {
-      splice @m_alleles, Individual->max_alleles();
-      my $po = $mutant->previous_operation();
-      $mutant = Individual->new({ alleles => [ @m_alleles ]});
-      $mutant->previous_operation($po);
-    }
-    return $mutant;
+  my $mutant;
+  if    ($mutation_type == 0) { $mutant = $self->insert_mutation()     }
+  elsif ($mutation_type == 1) { $mutant = $self->inversion_mutation()  }
+  elsif ($mutation_type == 2) { $mutant = $self->scramble_mutation()   }
+  elsif ($mutation_type == 3) { $mutant = $self->swap_mutation()       }
+  elsif ($mutation_type == 4) { $mutant = $self->reversing_mutation()  }
+  elsif ($mutation_type == 5) { $mutant = $self->creep_mutation()      }
+  elsif ($mutation_type == 6) { $mutant = $self->grow_mutation()       }
+  elsif ($mutation_type == 7) { $mutant = $self->shrink_mutation()     }
+  else { die "Invalid option\n" }
+
+
+  # Limit size if it's larger than max_alleles
+  my @m_alleles = @{$mutant->alleles()};
+  if (scalar(@m_alleles) > Individual->max_alleles()) {
+    splice @m_alleles, Individual->max_alleles();
+    my $po = $mutant->previous_operation();
+    $mutant = Individual->new({ alleles => [ @m_alleles ]});
+    $mutant->previous_operation($po);
   }
+  return $mutant;
 }
 
 # Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
