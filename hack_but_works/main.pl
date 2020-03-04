@@ -166,6 +166,7 @@ my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 # Giving the main loop a sense of history
 my $prev_best_distance = &best_distance;
 my $prev_best_image;
+my $save_gene_filename;
 my @distance_history = qw/1/;
 my $inner_cnt = 0;
 my $lsum = 1;
@@ -198,38 +199,35 @@ while ($prev_best_distance > $fitness_target) {
     my $best_distance = &best_distance();
     my $distance_diff = $prev_best_distance - $best_distance;
     $distance_diff = 0 if (abs($distance_diff) < 0.0000000000000002);
-    &status_to_user({ distance_diff  => $distance_diff,
-                      best_genes  => \@best_genes,
-                      mutant_population  => scalar @$mutants,
+    &status_to_user({ distance_diff     => $distance_diff,
+                      best_genes        => \@best_genes,
+                      mutant_population => scalar @$mutants,
                       child_population  => scalar @$children });
 
 
     # --------------------------------------------------
     # Save the best image and corresponding gene
-    my $pad_size = 6;
-    my $padding = '0'x ($pad_size - length($inner_cnt));
+    my $id_string = sprintf('%06d', $inner_cnt);
     my $best_image_so_far = $images->{$best_indices->[0]};
-    mkdir "output" unless ( -d "output" );
-    mkdir "output/$$" unless ( -d "output/$$" );
+    for ("output", "output/$$") { mkdir unless -d }
 
-
-    # Save image and genes as files
     if ($distance_diff != 0) { # save only if there is progress
-      my $fname = "output/$$/image_${padding}${inner_cnt}.png";
-      &save_image($best_image_so_far, $fname);
+      my $save_image_filename = "output/$$/image_${id_string}.png";
+      &save_image($best_image_so_far, $save_image_filename);
       rename "latest.png", 'previous.png';
-      symlink $fname, 'latest.png';
+      symlink $save_image_filename, 'latest.png';
       if ($prev_best_image) {
-        my $comparison = $best_image_so_far->Compare(image=>$prev_best_image, metric=>'mae');
-        &save_image($comparison, "comparison.png");
+        &save_image($best_image_so_far->Compare(image  => $prev_best_image,
+                                                metric => 'mae'),
+                    "comparison.png");
       }
       $prev_best_image = $best_image_so_far;
       $has_changed = 1;         # mark that a change has happened
     }
-    &save_gene(
-               { distance => $best_distance,
-                 gene => \@best_genes },
-               "output/$$/gene_${padding}${inner_cnt}.txt");
+    $save_gene_filename = "output/$$/gene_${id_string}.txt";
+    &save_gene( { distance => $best_distance,
+                  gene => \@best_genes },
+                $save_gene_filename);
 
 
     # --------------------------------------------------
@@ -331,7 +329,7 @@ sub stdev{
 }
 
 sub my_signal_handler {
-  print "\n\nOutput saved to 'output/$$'.\n";
+  print "\n\Most recent gene saved to '$save_gene_filename'.\n";
   die "Signal caught: '$!'" if $!;
   exit 0;
 }
