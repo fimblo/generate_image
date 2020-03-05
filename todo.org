@@ -1,64 +1,16 @@
 * Notes
-  - (setq auto-revert-interval 10)
+  - For previewing the images in emacs, and refresh every 10 seconds:
+    (setq auto-revert-interval 10)
 * Known problems
-** for short populations, the mutation ratio bugs out
-   $ perl main.pl -t anna.png -p 20 -i 5000 -se output/gen2706-anna/series.014/gene_003365.txt
-   Loading file 'output/gen2706-anna/series.014/gene_003365.txt'.
-   22 genes loaded. The best gene has distance '0.0649357727423015' to image.
-   Creating -2 mutations of the seed.
-   Creating images::::::::::::::::::^C
-** The scrub_genes sub is overzealous in removing genes. 
-    Scrubbed Gene. Old len: 843, New len: 695
-    Original gene length: 843       distance: 0.052
-    Scrubbed gene length: 695       distance: 0.053
-
 * cleaning todos
-** TODO fix order of radius strategies
+** DONE fix order of radius strategies
+   CLOSED: [2020-03-05 tor 15:20]
 ** DONE rename all setters. current naming is confusing
    CLOSED: [2020-02-13 tor 21:41]
 ** TODO write description for each sub
-** TODO consider fixing all subs so that they take positional params
-        from: 
-        sub foo() {
-          my $a = shift;
-          my $b = shift || 0;
-        }
-        
-        to:
-        
-        sub foo($a, $b=0) {
-          ...
-        }
-
-** TODO prefix internal subs with underscore
 * ideas
-** Remove scrubbing?  
-   It seems research in GP says that introns (what I call dead
-   alleles) are good for the population, increasing the variability.
-** TODO if given seed, save to same dir as seed
-** DONE Add datetime to stdout
-   CLOSED: [2020-02-18 tis 13:06]
-** DONE Radius strategy
-   CLOSED: [2020-02-18 tis 13:06]
-   - Start with XL radius strategy, and when it doesn't do enough, drop it and don't go back.
-   - Same with L strategy - when it's not good enough, don't do that anymore
-** DONE Clean up dead alleles
-   CLOSED: [2020-02-18 tis 13:06]
-   - a dead allele is one which is entirely occluded by a more recent
-     circle.
-   - Logically, if it was covered at some point and the distance went
-     down, then it wasn't as good an allele. So it should be safe to remove.
-   - However, I haven't thought it through entirely - since the BG
-     image isn't homogenous, I think there's a situation where about
-     half a circle matches the background.
-** DONE Diversify the population.
-   CLOSED: [2020-02-18 tis 13:06]
-   - if no real change has occurred for quite some time, it's time to
-     diversify the population, then let these diverse populations meet
-     again.
-
-
-** TODO A proper rewrite
+** DONE A proper rewrite
+   CLOSED: [2020-03-05 tor 15:21]
 *** Alleles/Genes
    - make an allele one value instead of an array of values
    - allele value can be 0 - 2047
@@ -100,3 +52,16 @@
       - 
 
 
+** Choice needs to be made. OO is nice but doesn't work as well as I wished. Hacky version works well, but is ugly.
+   Have separated them into two parts now. easy to tell the difference.
+   Will defer making the decision right now.
+** Main.pl
+   - Specify project when starting (or get a project name assigned)
+     - All output goes to that project.
+     - target image saved there automatically
+     - when starting up, you just need to spec the project and it should start where it left off.
+   - Status update to user can be cleaned
+     - Show change-map over the top individuals (survivor, mutant, child)
+     - Use colors!
+
+   - Separate program to parse gene files' ctime to create ascii frequency chart
