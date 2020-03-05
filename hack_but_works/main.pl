@@ -101,11 +101,11 @@ EOM
 # --------------------------------------------------
 # Go through commandline options
 my $target_image_filename = undef;
-my $seed_file = undef;
-my $fitness_target = 0.05;
-my $pool = 10;
-my $ratio = "1:2:1";
-my $help;
+my $seed_file             = undef;
+my $fitness_target        = 0.05;
+my $pool                  = 10;
+my $ratio                 = "1:2:1";
+my $help                  = undef;
 
 GetOptions(
   "target-file=s" => \$target_image_filename,
@@ -130,7 +130,6 @@ if ($fitness_target < 0.0001 or
     $fitness_target > 0.999) {
   die "Fitness needs to be a floating point number between 0.001 and 0.999";
 }
-
 
 unless ($ratio =~ m/^(\d+):(\d+):(\d+)$/) {
   print << "EOM";
