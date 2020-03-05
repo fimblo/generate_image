@@ -94,7 +94,7 @@ my $helptext = << "EOM";
   -f <fitness>      # target fitness distance (default 0.05)
   -r <ratio>        # population ratio for next generation.
                     # Survivor:Children:Mutants (default 1:2:1)
-  -p <pool>         # size of gene pool. (default 10)
+  -n <indivs>       # Number of individuals. (default 10)
   -h                # This help message
 EOM
 
@@ -103,7 +103,7 @@ EOM
 my $target_image_filename = undef;
 my $seed_file             = undef;
 my $fitness_target        = 0.05;
-my $pool                  = 10;
+my $pool_size             = 10;
 my $ratio                 = "1:2:1";
 my $help                  = undef;
 
@@ -111,7 +111,7 @@ GetOptions(
   "target-file=s" => \$target_image_filename,
   "seed=s"        => \$seed_file,
   "fitness=s"     => \$fitness_target,
-  "pool=i"        => \$pool,
+  "number-of-indivs=i" => \$pool_size,
   "ratio=s"       => \$ratio,
   "help"          => \$help,
   ) or die ("bad commandline args\n");
@@ -148,7 +148,7 @@ my $tot = $s+$c+$m;
 &survival_percent($s/$tot);
 &mate_percent($c/$tot);
 &mutate_percent($m/$tot);
-&max_population($pool);
+&max_population($pool_size);
 
 
 # ==================================================
