@@ -226,8 +226,10 @@ sub save_to_disk {
   my $abs_filename = $self->{drawing}->save_image($args);
   my $abs_diffname = $self->{drawing}->save_diff_image($args);
 
+  my @parts = split '/', $abs_filename;
+  my $fname = $parts[-1];
   rename "$dirname/latest.png", "$dirname/previous.png";
-  symlink $abs_filename, "$dirname/latest.png";
+  symlink $fname, "$dirname/latest.png";
 
   my $saved_drawing = $self->{drawing};
   delete $self->{drawing};
