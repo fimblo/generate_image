@@ -120,7 +120,7 @@ sub save_image {
 
 sub save_diff_image {
   my $self = shift;
-  my $args = shift // { filename => 'comparison.png'}
+  my $args = shift // { filename => 'comparison.png'};
 
   my $err = $self->{diff_image}->Write($args->{filename});
   die "$err" if "$err";
