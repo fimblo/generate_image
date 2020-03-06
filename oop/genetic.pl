@@ -10,9 +10,11 @@ use Individual;
 
 
 my $target_filename = $ARGV[0];
+die "file '$target_filename' not found" unless -e $target_filename;
+my $project_name = $ARGV[1] || $$;
 
-Individual->init_alleles(20);
-Individual->max_alleles(800);
+Individual->init_num_objects(20);
+Individual->max_num_objects(800);
 
 my $population = Population->new({
                                   target_image_filename => $target_filename,
@@ -34,7 +36,8 @@ while ($curr_best > 0.01) {
   $curr_best = &show_status_update([@best_indivs]);
 
   if ($curr_best < $prev_best) {
-    $best_indivs[0]->save_to_disk(sprintf "%06d", $i);
+    $best_indivs[0]->save_to_disk( { serial => sprintf("%06d", $i),
+                                     project => $project_name } );
     $prev_best = $curr_best;
   }
 
@@ -48,19 +51,19 @@ sub show_status_update {
   my $arg = shift;
   my @best_indivs = @$arg;
 
-  my (@fitness, @allele_count, $operations);
+  my (@fitness, @object_count, $operations);
   for my $bi (@best_indivs) {
     push @fitness, $bi->fitness();
-    push @allele_count, $bi->number_of_alleles();
+    push @object_count, $bi->number_of_objects();
     $operations .= $bi->previous_operation();
   }
   my $gen_i = sprintf "%4d", $i;
   my $best_f = sprintf "%.8f", $fitness[0];
   my $avg_f = sprintf "%.8f", average(@fitness);
   my $stdev_f = sprintf "%.8f", stdev(@fitness);
-  my $best_a = sprintf "%5d", $allele_count[0];
-  my $avg_a = sprintf "%8.2f", average(@allele_count);
-  my $stdev_a = sprintf "%8.2f", stdev(@allele_count);
+  my $best_a = sprintf "%5d", $object_count[0];
+  my $avg_a = sprintf "%8.2f", average(@object_count);
+  my $stdev_a = sprintf "%8.2f", stdev(@object_count);
 
   my $prev_f;
   if ($prev_best - $fitness[0] < 0.000000000001) {
@@ -75,7 +78,7 @@ sub show_status_update {
   say "Gen $gen_i: Top three individuals ($top_id_str) Map of Operations: ($operations) ";
   say "          Fitness (B:$best_f A:$avg_f S:$stdev_f)";
   say "          Fitness diff for best individual: $prev_f";
-  say "          Number of Alleles (B:$best_a A:$avg_a S:$stdev_a)";
+  say "          Number of Objects (B:$best_a A:$avg_a S:$stdev_a)";
 
 
   return $fitness[0];

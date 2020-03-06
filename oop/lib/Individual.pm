@@ -4,6 +4,7 @@ use strict;
 use diagnostics;
 use Storable 'retrieve';
 use Scalar::Util 'blessed';
+BEGIN { push @INC, qw| lib/ .|}
 use Drawing;
 
 package Individual;
@@ -14,10 +15,11 @@ use parent 'Storable';
 # --------------------------------------------------
 # CLASS VARIABLES
 #
-my $max_val      = 2048;  # maximum value of individual allele
-my $init_alleles = 1000;  # initial number of alleles
-my $max_alleles  = 2000;  # maximum number of alleles
-my $id           = 'a';   # start id for each Individual created
+my $init_num_objects = 20;   # initial number of geometric objects
+my $max_num_objects  = 2000; # maximum number of geometric objects
+my $id               = 'a';  # start id for each Individual created
+my $wxh = { width  => 400,   # width and height of target image
+            height => 400 };
 
 # --------------------------------------------------
 # CLASS METHODS
@@ -27,6 +29,7 @@ sub new {
   my $args = shift;
 
   my $self = {
+              objects => [],
               previous_operation => 'G',
               id => $id++
              };
@@ -35,34 +38,48 @@ sub new {
   if (exists $args->{filename}) {
     return $self->load_from_disk($args->{filename});
   }
-  if (exists $args->{alleles}) {
-    $self->{alleles} = [ @{$args->{alleles}} ];
+  if (exists $args->{objects}) {
+    $self->{objects} = [ @{$args->{objects}} ];
   } else {
-    $self->{alleles} = [];
-    for (my $i = 0; $i < Individual->init_alleles(); $i++) {
-      push @{$self->{alleles}}, int rand Individual->max_val();
+    my @objects;
+    my $i = 0;
+    while ($i++ < Individual->init_num_objects()) {
+      push @objects, Individual->generate_object();
     }
+    $self->{objects} = \@objects;
   }
 
-  $self->{number_of_alleles} = @{$self->{alleles}};
+  $self->{number_of_objects} = scalar @{$self->{objects}};
 
   return $self;
 }
 
-sub max_val {
+sub init_num_objects {
   my $class = shift; my $arg = shift;
-  $max_val = $arg // return $max_val;
+  $init_num_objects = $arg // return $init_num_objects;
 }
 
-sub init_alleles {
+sub max_num_objects {
   my $class = shift; my $arg = shift;
-  $init_alleles = $arg // return $init_alleles;
+  $max_num_objects = $arg // return $max_num_objects;
 }
 
-sub max_alleles {
+sub wxh {
   my $class = shift; my $arg = shift;
-  $max_alleles = $arg // return $max_alleles;
+  $wxh = $arg // return $wxh;
 }
+
+sub generate_object {
+  my $class = shift;
+  my ($w, $h) = ($wxh->{width}, $wxh->{height});
+  return [ int rand $w,
+           int rand $h,
+           int rand ($w<$h ? $w : $h),
+           int rand 256,
+           int rand 256,
+           int rand 256 ];
+}
+
 
 # --------------------------------------------------
 # INSTANCE METHODS
@@ -71,23 +88,23 @@ sub id {
   my $self = shift; my $arg = shift;
   $self->{id} = shift // return $self->{id};
 }
-sub number_of_alleles {
+sub number_of_objects {
   my $self = shift;
-  $self->{number_of_alleles} = shift // return $self->{number_of_alleles};
+  $self->{number_of_objects} = shift // return $self->{number_of_objects};
 }
 sub previous_operation {
   my $self = shift;
   $self->{previous_operation} = shift // return $self->{previous_operation};
 }
 
-sub alleles {
+sub objects {
   my $self = shift;
   my $arg = shift;
   if ($arg) {
-    $self->{alleles} = $arg;
-    $self->{number_of_alleles} = scalar @$arg;
+    $self->{objects} = $arg;
+    $self->{number_of_objects} = scalar @$arg;
   } else {
-    return $self->{alleles};
+    return $self->{objects};
   }
 }
 
@@ -95,7 +112,7 @@ sub draw {
   my $self = shift;
 
   my $d = Drawing->new();
-  $d->image({ alleles => $self->alleles() });
+  $d->image({ objects => $self->objects() });
 
   $self->{drawing} = $d;
   return $d;
@@ -110,194 +127,113 @@ sub fitness {
 sub mate {
   my $self = shift;
   my $mate = shift or die "must supply a mate!";
-  my $r1 = int rand $self->number_of_alleles();
-  my $r2 = int rand $mate->number_of_alleles();
-  my @s_all = @{$self->alleles()};
-  my @m_all = @{$mate->alleles()};
+  my $r1 = int rand $self->number_of_objects();
+  my $r2 = int rand $mate->number_of_objects();
+  my @s_all = @{$self->objects()};
+  my @m_all = @{$mate->objects()};
 
-  my @first;
-  if ($r1 < 1) {
-    @first = ();
-  } else {
-    @first = @s_all[0   .. $r1-1];
+  my @first = @s_all[0 .. $r1];
+  my @last = @m_all[$r2 .. -1];
+
+  # Limit size if it's larger than max_num_objects
+  my @objects = (@first, @last);
+  if (scalar(@first) + scalar (@last) > Individual->max_num_objects()) {
+    splice @objects, Individual->max_num_objects();
   }
-  my @last  = @m_all[$r2 ..  $#m_all];
+  my $child = Individual->new({ objects => [ @objects ]});
 
-  # Limit size if it's larger than max_alleles
-  my @alleles = (@first, @last);
-  if (scalar(@alleles) > Individual->max_alleles()) {
-    splice @alleles, Individual->max_alleles();
-  }
-  my $child = Individual->new({ alleles => [ @alleles ]});
-
-  $child->previous_operation('M');
+  $child->previous_operation('c');
   return $child;
 }
 
 sub mutate {
   my $self = shift;
 
-  my $no_of_mutations = 8;
+  my $no_of_mutations = 2;
   my $mutation_type = shift // int rand $no_of_mutations;
   die "Invalid mutation type\n" if ($mutation_type > $no_of_mutations);
 
 
   my $mutant;
-  if    ($mutation_type == 0) { $mutant = $self->insert_mutation()     }
-  elsif ($mutation_type == 1) { $mutant = $self->inversion_mutation()  }
-  elsif ($mutation_type == 2) { $mutant = $self->scramble_mutation()   }
-  elsif ($mutation_type == 3) { $mutant = $self->swap_mutation()       }
-  elsif ($mutation_type == 4) { $mutant = $self->reversing_mutation()  }
-  elsif ($mutation_type == 5) { $mutant = $self->creep_mutation()      }
-  elsif ($mutation_type == 6) { $mutant = $self->grow_mutation()       }
-  elsif ($mutation_type == 7) { $mutant = $self->shrink_mutation()     }
+  if    ($mutation_type == 0) { $mutant = $self->grow_mutation()    }
+  elsif ($mutation_type == 1) { $mutant = $self->insert_mutation()  }
+  elsif ($mutation_type == 2) { $mutant = $self->shrink_mutation()  }
+  elsif ($mutation_type == 3) { $mutant = $self->replace_mutation() }
   else { die "Invalid option\n" }
 
 
-  # Limit size if it's larger than max_alleles
-  my @m_alleles = @{$mutant->alleles()};
-  if (scalar(@m_alleles) > Individual->max_alleles()) {
-    splice @m_alleles, Individual->max_alleles();
+  # Limit size if it's larger than max_num_objects
+  my @objects = @{$mutant->objects()};
+  if (scalar(@objects) > Individual->max_num_objects()) {
+    splice @objects, Individual->max_num_objects();
     my $po = $mutant->previous_operation();
-    $mutant = Individual->new({ alleles => [ @m_alleles ]});
+    $mutant = Individual->new({ objects => [ @objects ]});
     $mutant->previous_operation($po);
   }
   return $mutant;
 }
 
-# Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
+sub grow_mutation {
+  my $self = shift;
+  my @objects = @{ $self->objects() };
+  my $new_object = Individual->generate_object();
+  my $mutant = Individual->new( { objects => [ @objects, $new_object ]} );
+  $mutant->previous_operation(0);
+  return $mutant;
+}
 sub insert_mutation {
   my $self = shift;
-  my ($r1, $r2) = sort { $a <=> $b } (rand $self->number_of_alleles(), rand $self->number_of_alleles());
-  my @alleles = @{$self->alleles()};
-
-  my $removed = splice @alleles, $r2, 1;
-  splice @alleles, $r1, 0, $removed;
-
-  my $mutant = Individual->new({ alleles => \@alleles });
+  my @objects = @{ $self->objects() };
+  my $new_object = Individual->generate_object();
+  my $pos = int rand scalar @objects;
+  splice @objects, $pos, 0, $new_object;
+  my $mutant = Individual->new( { objects => [ @objects, $new_object ]} );
   $mutant->previous_operation(1);
   return $mutant;
 }
-
-# Select two alleles at random, then invert the alleles values between them
-sub inversion_mutation {
+sub shrink_mutation {
   my $self = shift;
-  my ($r1, $r2) = sort { $a <=> $b } (rand $self->number_of_alleles(), rand $self->number_of_alleles());
+  my @objects = @{ $self->objects() };
+  my $pos = int rand scalar @objects;
+  splice @objects, $pos, 1;
 
-  my @alleles = @{$self->alleles()};
-  my $m = Individual->max_val();
-
-  my @first;
-  if ($r1 < 1) {
-    @first = ();
-  } else {
-    @first = @alleles[0   .. $r1 - 1];
-  }
-
-  my @mid   = map { $m - $_ } @alleles[$r1 .. $r2 - 1];
-  my @last  = @alleles[$r2 .. $#alleles];
-
-  my $mutant = Individual->new( {alleles => [@first, @mid, @last] } );
+  my $mutant = Individual->new( { objects => [ @objects ]} );
   $mutant->previous_operation(2);
   return $mutant;
 }
-
-# Select subset of alleles, and move them to each others' locations without changing them
-sub scramble_mutation {
+sub replace_mutation {
   my $self = shift;
-  my $pair_count = 5;           # change this later
-  my $mutant;
-  my @alleles = @{ $self->alleles() };
+  my @objects = @{ $self->objects() };
+  my $new_object = Individual->generate_object();
+  my $pos = int rand scalar @objects;
+  splice(@objects, $pos, 1, $new_object);
 
-  while ($pair_count-- > 0) {
-    $mutant = Individual->new( { alleles => [ @alleles ] } );
-    $mutant = $mutant->swap_mutation();
-    @alleles = @{ $mutant->alleles() };
-  }
-
-  $mutant = Individual->new( {alleles => [ @alleles ] } );
+  my $mutant = Individual->new( { objects => [ @objects ]} );
   $mutant->previous_operation(3);
   return $mutant;
 }
 
-# Select two alleles and swap their locations
-sub swap_mutation {
-  my $self = shift;
-  my @alleles = @{ $self->alleles() };
-  my $mutant = Individual->new( { alleles => [ @alleles ] } );
-  my ($i1, $i2) = (rand $mutant->number_of_alleles(), rand $mutant->number_of_alleles());
-  my ($a1, $a2) = ($mutant->{alleles}[$i1], $mutant->{alleles}[$i2]);
-  $mutant->{alleles}[$i1] = $a2;
-  $mutant->{alleles}[$i2] = $a1;
-
-  $mutant->previous_operation(4);
-  return $mutant;
-}
-
-# Select two alleles at random, then reverse the location order of the alleles between them
-sub reversing_mutation {
-  my $self = shift;
-  my $mutant = Individual->new( { alleles => $self->alleles() } );
-  my ($i1, $i2) = sort (rand $mutant->number_of_alleles(), rand $mutant->number_of_alleles());
-  my $diff = $i2 - $i1;
-
-  my @alleles = @{ $mutant->alleles() };
-  my @reversed = reverse splice @alleles, $i1, $diff;
-  splice @alleles, $i1, 0, @reversed;
-  $mutant->alleles(\@alleles);
-
-  $mutant->previous_operation(5);
-  return $mutant;
-}
-
-# Select an allele and replace it with a random value
-sub creep_mutation {
-  my $self = shift;
-  my @alleles = @{ $self->alleles() };
-  my $mutant = Individual->new( { alleles => [ @alleles ] } );
-  my $i = rand $self->number_of_alleles();
-
-  $mutant->{alleles}[$i] = int rand Individual->max_val();
-
-  $mutant->previous_operation(6);
-  return $mutant;
-}
-
-# Grow allele string
-sub grow_mutation {
-  my $self = shift;
-  my @alleles = @{ $self->alleles() };
-  my $new_allele = int rand Individual->max_val();
-  my $pos = int rand scalar @alleles;
-  splice @alleles, $pos, 0, $new_allele;
-
-  my $mutant = Individual->new( { alleles => [ @alleles ]} );
-  $mutant->previous_operation(7);
-  return $mutant;
-}
-
-# Shrink allele string
-sub shrink_mutation {
-  my $self = shift;
-  my @alleles = @{ $self->alleles() };
-  my $pos = int rand scalar @alleles;
-  splice @alleles, $pos, 1;
-
-  my $mutant = Individual->new( { alleles => [ @alleles ]} );
-  $mutant->previous_operation(8);
-  return $mutant;
-}
 
 sub save_to_disk {
   my $self = shift;
-  my $name = shift // 'individual.txt';
+  my $args = shift // { serial => 'XYZ', project => $$};
+  my $project = $args->{project};
+  my $serial = $args->{serial};
 
-  $self->{drawing}->save_image({filename => "$$-${name}.png"});
-  $self->{drawing}->save_diff_image({filename => "comparison.png"});
-  rename "latest.png", "previous.png";
-  symlink "$$-${name}.png", "latest.png";
-  my $err = $self->store("$$-${name}.txt");
+  for ("output", "output/$project") { mkdir unless -d }
+  my $dirname = $args->{dirname} = "output/$project";
+
+  my $abs_filename = $self->{drawing}->save_image($args);
+  my $abs_diffname = $self->{drawing}->save_diff_image($args);
+
+  rename "$dirname/latest.png", "$dirname/previous.png";
+  symlink $abs_filename, "$dirname/latest.png";
+
+  my $saved_drawing = $self->{drawing};
+  delete $self->{drawing};
+  my $err = $self->store("$dirname/individual-${serial}.txt");
   die $err unless $err;
+  $self->{drawing} = $saved_drawing;
 }
 
 sub load_from_disk {
@@ -314,11 +250,12 @@ sub load_from_disk {
     unless $data->UNIVERSAL::isa('Individual');
   die "Object from '$name' does not have all the methods it should\n"
     unless $data->UNIVERSAL::can('to_string');
-  die "No allele key exists in '$name' hash.\n"
-    unless exists $data->{alleles};
-  die "No allele arrayref exists in '$name'.\n"
-    unless ref $data->{alleles} eq 'ARRAY';
-  my $stringified = join '', @{ $data->{alleles} };
+  die "No 'object' key exists in '$name' hash.\n"
+    unless exists $data->{objects};
+  die "No 'object' arrayref exists in '$name'.\n"
+    unless ref $data->{objects} eq 'ARRAY';
+
+  my $stringified = join '', $self->flatten($data->{objects});
   die "There are non-digits in the allele array.\n"
     if $stringified =~ /\D/;
 
@@ -329,10 +266,30 @@ sub to_string {
   my $self = shift;
   my $arg = shift;
 
-  my $all_no = $self->{number_of_alleles};
-  my $cir_no = int($all_no / 7);
+  my $id = $self->{id};
+  my $all_no = $self->{number_of_objects};
 
-  return "Individual (len:$all_no) (cir:$cir_no) (@{$self->alleles()})";
+  return "Individual (id: $id) (cir:$all_no) (@{$self->objects()})";
 }
 
+sub flatten {
+  my $self = shift;
+  map { ref $_ ? $self->flatten(@{$_}) : $_ } @_;
+}
+
+
 1;
+__END__
+# --------------------------------------------------
+# End of script
+# --------------------------------------------------
+
+# Possible mutation types I could use
+# Select two alleles at random (a1, a2). Insert a2 after a1, shifting the rest upwards
+# Select two alleles at random, then invert the alleles values between them
+# Select subset of alleles, and move them to each others' locations without changing them
+# Select two alleles and swap their locations
+# Select two alleles at random, then reverse the location order of the alleles between them
+# Select an allele and replace it with a random value
+# Grow allele string
+# Shrink allele string

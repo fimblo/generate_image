@@ -25,6 +25,10 @@ my ($bnr, $cnr, $mnr) = (undef, undef, undef);
 # filename of target image to approximate
 my $target_image_filename = undef;
 
+# width and height of target image, stored like so:
+# {width => $width, height => $height};
+my $wxh = {};
+
 # --------------------------------------------------
 # CLASS METHODS
 #
@@ -35,6 +39,10 @@ sub pop_size {
 sub bcm_ratio {
   my $class = shift; my $arg = shift;
   $bcm_ratio = $arg // return $bcm_ratio;
+}
+sub wxh {
+  my $class = shift; my $arg = shift;
+  $wxh = $arg // return $wxh;
 }
 
 
@@ -52,7 +60,7 @@ sub new {
   die "Target image filename required"
     unless exists $args->{target_image_filename};
   $target_image_filename = $args->{target_image_filename};
-  Drawing->setup({target_image_filename => $args->{target_image_filename}});
+  $wxh = Drawing->setup({target_image_filename => $args->{target_image_filename}});
 
 
   $pop_size = $args->{population_size}
@@ -94,15 +102,12 @@ sub generate_individuals {
 sub create_images {
   my $self = shift;
 
-  for (my $i = 0; $i < @{$self->{population}}; $i++) {
-    unless (defined $self->{population}[$i]) {
-      say "undefined";
-      say "yeah>";
-    }
-
-    $self->{population}[$i]->draw();
+  my @pop = @{$self->{population}};
+  for (my $i = 0; $i < @pop; $i++)   {
+    $pop[$i]->draw() if (exists $pop[$i] and defined $pop[$i]);
   }
 }
+
 
 sub prep_next_generation {
   my $self = shift;

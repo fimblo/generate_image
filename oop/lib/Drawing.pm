@@ -35,6 +35,7 @@ sub setup {
   $width = $target_image->Get('width');
   $height = $target_image->Get('height');
   $wxh = $width . 'x' . $height;
+  return {width => $width, height => $height};
 }
 
 sub new {
@@ -75,34 +76,17 @@ sub image {
   my $args = shift;
   return $self->{image} if exists $self->{image};
 
-  die "Supply alleles as arg" unless exists $args->{alleles};
+  die "Supply allele objects as arg" unless exists $args->{objects};
 
   my $im = Image::Magick->new();
   $im->Set(size=>${wxh});
   $im->Set(magick=>'PNG32');
   $im->Read('canvas:white');
 
-  my @alleles = ( @{$args->{alleles}} );
-  my $circles;
+  my @objects = ( @{$args->{objects}} );
 
-  while (@alleles) {
-    last if @alleles < 7;
-    my ($index, $xl, $yl, $radl, $rl, $gl, $bl, @remains) = @alleles;
-    my $x = $xl % $width;       # gotta fix numbers since range there
-    my $y = $yl % $height;      # is much bigger than here
-    my $yr = $y + ($radl % $height);
-    my $r = $rl % 256;
-    my $g = $gl % 256;
-    my $b = $bl % 256;
-    $circles->{$index} = [$x, $y, $yr, $r, $g, $b];
-
-    last if @remains < 7;
-    @alleles = @remains;
-  }
-
-  for my $i (sort {$a<=>$b} keys %$circles) {
-    my ($x, $y, $yr, $r, $g, $b) = @{$circles->{$i}};
-
+  for (@objects) {
+    my ($x, $y, $yr, $r, $g, $b) = @{$_};
     $im->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $x,$yr");
   }
 
@@ -112,18 +96,22 @@ sub image {
 
 sub save_image {
   my $self = shift;
-  my $args = shift // { filename => 'image.png'};
+  my $args = shift // { serial => 'XYZ', dirname => '.'};
 
-  my $err = $self->{image}->Write($args->{filename});
+  my $fname = join '',  ($args->{dirname}, '/image-', $args->{serial}, '.png');
+  my $err = $self->{image}->Write($fname);
   die "$err" if "$err";
+  return $fname;
 }
 
 sub save_diff_image {
   my $self = shift;
-  my $args = shift // { filename => 'comparison.png'};
+  my $args = shift // { dirname => '.'};
 
-  my $err = $self->{diff_image}->Write($args->{filename});
+  my $fname = "$args->{dirname}/comparison.png";
+  my $err = $self->{diff_image}->Write($fname);
   die "$err" if "$err";
+  return $fname;
 }
 
 sub to_string { ... }
