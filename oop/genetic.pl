@@ -9,34 +9,55 @@ BEGIN { push @INC, qw| lib/ .|}
 use Population;
 use Individual;
 
-
+# --------------------------------------------------
+# Handle commandline arguments
 my $target_filename = $ARGV[0];
 die "file '$target_filename' not found" unless -e $target_filename;
 my $project_name = $ARGV[1] || $$;
 
+
+# --------------------------------------------------
+# Set things up
 Individual->init_num_objects(20);
 Individual->max_num_objects(800);
 
+
+# --------------------------------------------------
+# Create a population and generate the individuals
 my $population = Population->new({
                                   target_image_filename => $target_filename,
                                   population_size => 60,
                                   bcm_ratio => '1:4:1'
                                  });
-
 $population->generate_individuals();
 
 
-# Main loop
-my $i = 1;
-my $prev_best = 1;
-my $curr_best = 1;
+# --------------------------------------------------
+# Repeat the below until the population has an individual which is
+# "good enough"
+my ($i, $prev_best, $curr_best) = (1,1,1);
 while ($curr_best > 0.01) {
+
+  # --------------------------------------------------
+  # Create images which reflect the individuals
   $population->create_images();
+
+  # --------------------------------------------------
+  # Prepare the next generation
+  # - Mate the best individuals
+  # - Mutate the best individuals
+  #
+  # Create a new population with the best survivors, children and
+  # mutants.
   my $retval = $population->prep_next_generation();
   my @best_indivs = @{$retval->{best}};
 
+  # --------------------------------------------------
+  # Update the user with status
   $curr_best = &show_status_update($retval);
 
+  # --------------------------------------------------
+  # Save the current state to disk
   if ($curr_best < $prev_best) {
     $best_indivs[0]->save_to_disk( { serial => sprintf("%06d", $i),
                                      project => $project_name } );
@@ -47,6 +68,8 @@ while ($curr_best > 0.01) {
 }
 
 
+# --------------------------------------------------
+# Subs
 
 # my $size_colors = {"Extra large" => 'cyan on_black',
 #                    Large         => 'blue on_black',
