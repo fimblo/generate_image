@@ -6,6 +6,7 @@ use Storable 'retrieve';
 use Scalar::Util 'blessed';
 BEGIN { push @INC, qw| lib/ .|}
 use Drawing;
+use CircleStrategist;
 
 package Individual;
 use parent 'Storable';
@@ -17,6 +18,7 @@ use parent 'Storable';
 #
 my $init_num_objects = 20;   # initial number of geometric objects
 my $max_num_objects  = 2000; # maximum number of geometric objects
+my $strategist       = undef;
 my $id               = 'a';  # start id for each Individual created
 my $wxh = { width  => 400,   # width and height of target image
             height => 400 };
@@ -54,6 +56,11 @@ sub new {
   return $self;
 }
 
+sub strategist {
+  my $class = shift; my $arg = shift;
+  $strategist = $arg // return $strategist;
+}
+
 sub init_num_objects {
   my $class = shift; my $arg = shift;
   $init_num_objects = $arg // return $init_num_objects;
@@ -72,9 +79,12 @@ sub wxh {
 sub generate_object {
   my $class = shift;
   my ($w, $h) = ($wxh->{width}, $wxh->{height});
+  my ($rmin, $rmax) = @{ Individual->strategist()->get_radii_range() };
+  my $radius = $rmin + int(rand( $rmax - $rmin));
+
   return [ int rand $w,
            int rand $h,
-           int rand ($w<$h ? $w : $h),
+           int rand $h + $radius,
            int rand 256,
            int rand 256,
            int rand 256 ];

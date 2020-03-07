@@ -5,6 +5,7 @@ use diagnostics;
 
 BEGIN { push @INC, qw| lib/ .|}
 use Individual;
+use CircleStrategist;
 
 package Population;
 
@@ -53,15 +54,20 @@ sub new {
   my $self = {
               population => [],
               prev_best_ops => {},
+              prev_best_fitness => 1,
               best => [],
+              circle_strategist => undef,
              };
   bless $self, $class;
+
+  my $str = CircleStrategist->new();
+  $self->{circle_strategist} = $str;
+  Individual->strategist($str);
 
   die "Target image filename required"
     unless exists $args->{target_image_filename};
   $target_image_filename = $args->{target_image_filename};
   $wxh = Drawing->setup({target_image_filename => $args->{target_image_filename}});
-
 
   $pop_size = $args->{population_size}
     if exists $args->{population_size};
@@ -135,6 +141,12 @@ sub prep_next_generation {
   }
   $self->best( [ @best ] );
   $self->{prev_best_ops} = $best_ops;
+  my $distance = $self->{prev_best_fitness} - $sorted_keys[0];
+  $self->{prev_best_fitness} = $sorted_keys[0];
+
+  # inform/update strategist with newest fitness value
+  my $next = $self->{circle_strategist}->inform({distance => $distance});
+
 
   # create children
   for (my $i = 0; $i < $cnr; $i++) {
@@ -151,7 +163,8 @@ sub prep_next_generation {
 
   $self->{population} = [ @best, @children, @mutants ];
 
-  return [ @best ];
+  return { best => [ @best ],
+           radius_strategy => $next };
 }
 
 1;

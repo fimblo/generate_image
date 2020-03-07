@@ -3,6 +3,7 @@ use v5.18;
 use warnings;
 use strict;
 use diagnostics;
+use Term::ANSIColor;
 
 BEGIN { push @INC, qw| lib/ .|}
 use Population;
@@ -31,9 +32,10 @@ my $prev_best = 1;
 my $curr_best = 1;
 while ($curr_best > 0.01) {
   $population->create_images();
-  my @best_indivs = @{$population->prep_next_generation()};
+  my $retval = $population->prep_next_generation();
+  my @best_indivs = @{$retval->{best}};
 
-  $curr_best = &show_status_update([@best_indivs]);
+  $curr_best = &show_status_update($retval);
 
   if ($curr_best < $prev_best) {
     $best_indivs[0]->save_to_disk( { serial => sprintf("%06d", $i),
@@ -46,10 +48,16 @@ while ($curr_best > 0.01) {
 
 
 
-
+# my $size_colors = {"Extra large" => 'cyan on_black',
+#                    Large         => 'blue on_black',
+#                    Medium        => 'red on_black',
+#                    Small         => 'yellow on_black',
+#                    Tiny          => 'magenta on_black'};
+my $prev_top_id = {};
 sub show_status_update {
   my $arg = shift;
-  my @best_indivs = @$arg;
+  my @best_indivs = @{$arg->{best}};
+  my $size = $arg->{radius_strategy};
 
   my (@fitness, @object_count, $operations);
   for my $bi (@best_indivs) {
@@ -69,17 +77,28 @@ sub show_status_update {
   if ($prev_best - $fitness[0] < 0.000000000001) {
     $prev_f = 0;
   } else {
-    $prev_f = sprintf "%.8f", $fitness[0] - $prev_best;
+    $prev_f = colored(sprintf("%.8f", $fitness[0] - $prev_best), 'yellow on_black');
   }
 
   my @top_ids = map {$_->id()} @best_indivs[0..2];
-  my $top_id_str = join ', ', @top_ids;
+  my @colored_top_ids;
+  for my $id (@top_ids) {
+    if (exists $prev_top_id->{$id}) {
+      push @colored_top_ids, $id;
+    } else {
+      push @colored_top_ids, colored($id, 'red on_black');
+    }
+  }
+  $prev_top_id = {};
+  for my $id (@top_ids) { $prev_top_id->{$id} = 1; }
+
+  my $top_id_str = join ', ', @colored_top_ids;
 
   say "Gen $gen_i: Top three individuals ($top_id_str) Map of Operations: ($operations) ";
+  say "          Object count (B:$best_a A:$avg_a S:$stdev_a)";
   say "          Fitness (B:$best_f A:$avg_f S:$stdev_f)";
   say "          Fitness diff for best individual: $prev_f";
-  say "          Number of Objects (B:$best_a A:$avg_a S:$stdev_a)";
-
+  say "          Radius size for new circles: $size";
 
   return $fitness[0];
 }
