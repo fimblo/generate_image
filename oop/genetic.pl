@@ -9,6 +9,7 @@ BEGIN { push @INC, qw| lib/ .|}
 use Population;
 use Individual;
 
+
 # --------------------------------------------------
 # Handle commandline arguments
 my $target_filename = $ARGV[0];
@@ -71,16 +72,10 @@ while ($curr_best > 0.01) {
 # --------------------------------------------------
 # Subs
 
-# my $size_colors = {"Extra large" => 'cyan on_black',
-#                    Large         => 'blue on_black',
-#                    Medium        => 'red on_black',
-#                    Small         => 'yellow on_black',
-#                    Tiny          => 'magenta on_black'};
 my $prev_top_id = {};
 sub show_status_update {
   my $arg = shift;
   my @best_indivs = @{$arg->{best}};
-  my $size = $arg->{radius_strategy};
 
   my (@fitness, @object_count, $operations);
   for my $bi (@best_indivs) {
@@ -117,11 +112,15 @@ sub show_status_update {
 
   my $top_id_str = join ', ', @colored_top_ids;
 
+
+  # $i & 1 is a bitwise operator, in this context checking if $i is odd.
+  my $csize = colored(sprintf("% 6s", $arg->{strategy_name}),
+                      $arg->{strategy_id} & 1 ? 'yellow on_black' : 'cyan on_black' );
   say "Gen $gen_i: Top three individuals ($top_id_str) Map of Operations: ($operations) ";
-  say "          Object count (B:$best_a A:$avg_a S:$stdev_a)";
+  say " ($csize)  Object count (B:$best_a A:$avg_a S:$stdev_a)";
   say "          Fitness (B:$best_f A:$avg_f S:$stdev_f)";
   say "          Fitness diff for best individual: $prev_f";
-  say "          Radius size for new circles: $size";
+
 
   return $fitness[0];
 }

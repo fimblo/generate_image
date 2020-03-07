@@ -164,7 +164,8 @@ sub prep_next_generation {
   $self->{population} = [ @best, @children, @mutants ];
 
   return { best => [ @best ],
-           radius_strategy => $next };
+           strategy_id => $next->{strategy_id},
+           strategy_name => $next->{strategy_name}};
 }
 
 1;
