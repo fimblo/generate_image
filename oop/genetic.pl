@@ -75,22 +75,29 @@ while ($curr_best > 0.01) {
 my $prev_top_id = {};
 my $op_stats = {};
 my $op_total;
+my @op_history;
 sub show_status_update {
   my $arg = shift;
   my @best_indivs = @{$arg->{best}};
 
-  my (@fitness, @object_count, $operations);
+  my (@fitness, @object_count, @op_history_local);
+  my $operations = '';
   for my $bi (@best_indivs) {
     push @fitness, $bi->fitness();
     push @object_count, $bi->number_of_objects();
 
     my $po = $bi->previous_operation();
-    $operations .= $po;
-    unless ($po eq 'G') { # skip stats for first generation
-      $op_stats->{$po}++;
-      $op_total++;
+    unless ($po eq 'G') {       # skip stats for first generation
+      push @op_history_local, $po;
+      $operations .= $po;     # for displaying this round's operations
+      $op_stats->{$po}++;     # for displaying all-time statistics
+      $op_total++;            # for displaying all-time statistics
     }
   }
+  # for keeping track of the operations for the last 100 rounds
+  push @op_history, [ @op_history_local ];
+  shift @op_history if scalar(@op_history) > 100;
+
   my $gen_i = sprintf "%4d", $i;
   my $best_f = sprintf "%.8f", $fitness[0];
   my $avg_f = sprintf "%.8f", average(@fitness);
@@ -116,7 +123,9 @@ sub show_status_update {
     }
   }
   $prev_top_id = {};
-  for my $id (@top_ids) { $prev_top_id->{$id} = 1; }
+  for my $id (@top_ids) {
+    $prev_top_id->{$id} = 1;
+  }
   my $top_id_str = join ', ', @colored_top_ids;
 
 
@@ -124,20 +133,21 @@ sub show_status_update {
   my $csize = colored(sprintf("% 6s", $arg->{strategy_name}),
                       $arg->{strategy_id} & 1 ? 'yellow on_black' : 'cyan on_black' );
   say "Gen $gen_i: Top three individuals ($top_id_str) Map of Operations: ($operations) ";
-  say " ($csize)  Object count (B:$best_a A:$avg_a S:$stdev_a)";
+  say " ($csize) Object count (B:$best_a A:$avg_a S:$stdev_a)";
   say "          Fitness (B:$best_f A:$avg_f S:$stdev_f)";
   say "          Fitness diff for best individual: $prev_f";
 
 
-  # Operations statistics
-  if ($i > 3) {
-    print ' 'x10 .
-      'Survi ' . 'Child ' .
-      'Mut 0 ' . 'Mut 1 ' .
-      'Mut 2 ' . 'Mut 3 ' .
-      'Mut 4 ' . 'Mut 5 ' . "\n";
-
-    print ' 'x10;
+  # Operations statistics - all time
+  print ' 'x19 .
+    'Survi ' . 'Child ' .
+    'Mut 0 ' . 'Mut 1 ' .
+    'Mut 2 ' . 'Mut 3 ' .
+    'Mut 4 ' . 'Mut 5 ' . "\n";
+  print ' 'x10 . 'All-time ';
+  unless ($i > 10) {
+    say "----% ----% ----% ----% ----% ----% ----% ----%";
+  } else {
     for my $o (qw/. c 0 1 2 3 4 5/) {
       my $v = $op_stats->{$o} // 0;
       my $pc = sprintf("%4s", sprintf('%2.1f', 100*$v/$op_total));
@@ -146,9 +156,52 @@ sub show_status_update {
     print "\n";
   }
 
+  # Operations statistics - last 100
+  print ' 'x10 . 'Last 100 ';
+  unless ($i > 100) {
+    say "----% ----% ----% ----% ----% ----% ----% ----%";
+  } else {
+    # last 100
+    my @hist_ops = flatten(@op_history);
+    my $hist_reg;
+    $hist_reg->{$_}++ for (@hist_ops);
+
+    for my $o (qw/. c 0 1 2 3 4 5/) {
+      my $v = $hist_reg->{$o} // 0;
+      my $pc = sprintf("%4s", sprintf('%2.1f', 100*$v/scalar(@hist_ops)));
+      print "$pc% ";
+    }
+    print "\n";
+  }
+
+  # Operations statistics - last 10
+  print ' 'x10 . 'Last 10  ';
+  unless ($i > 10) {
+    say "----% ----% ----% ----% ----% ----% ----% ----%";
+  } else {
+    # last 10
+    my $hist_reg = {};
+    my @rev_history = reverse @op_history;
+    my @hist_ops = flatten(@rev_history[0..10]);
+    $hist_reg->{$_}++ for (@hist_ops);
+
+    for my $o (qw/. c 0 1 2 3 4 5/) {
+      my $v = $hist_reg->{$o} // 0;
+      my $pc = sprintf("%4s", sprintf('%2.1f', 100*$v/scalar(@hist_ops)));
+      print "$pc% ";
+    }
+    print "\n";
+  }
+
+
+
+
   return $fitness[0];
 }
 
+sub flatten {
+  map { ref $_ ? flatten(@{$_}) : $_ } @_;
+}
 
 sub average{
   my @data = @_;
