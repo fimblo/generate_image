@@ -73,6 +73,8 @@ while ($curr_best > 0.01) {
 # Subs
 
 my $prev_top_id = {};
+my $op_stats = {};
+my $op_total;
 sub show_status_update {
   my $arg = shift;
   my @best_indivs = @{$arg->{best}};
@@ -81,7 +83,13 @@ sub show_status_update {
   for my $bi (@best_indivs) {
     push @fitness, $bi->fitness();
     push @object_count, $bi->number_of_objects();
-    $operations .= $bi->previous_operation();
+
+    my $po = $bi->previous_operation();
+    $operations .= $po;
+    unless ($po eq 'G') { # skip stats for first generation
+      $op_stats->{$po}++;
+      $op_total++;
+    }
   }
   my $gen_i = sprintf "%4d", $i;
   my $best_f = sprintf "%.8f", $fitness[0];
@@ -109,7 +117,6 @@ sub show_status_update {
   }
   $prev_top_id = {};
   for my $id (@top_ids) { $prev_top_id->{$id} = 1; }
-
   my $top_id_str = join ', ', @colored_top_ids;
 
 
@@ -121,6 +128,23 @@ sub show_status_update {
   say "          Fitness (B:$best_f A:$avg_f S:$stdev_f)";
   say "          Fitness diff for best individual: $prev_f";
 
+
+  # Operations statistics
+  if ($i > 3) {
+    print ' 'x10 .
+      'Survi ' . 'Child ' .
+      'Mut 0 ' . 'Mut 1 ' .
+      'Mut 2 ' . 'Mut 3 ' .
+      'Mut 4 ' . 'Mut 5 ' . "\n";
+
+    print ' 'x10;
+    for my $o (qw/. c 0 1 2 3 4 5/) {
+      my $v = $op_stats->{$o} // 0;
+      my $pc = sprintf("%4s", sprintf('%2.1f', 100*$v/$op_total));
+      print "$pc% ";
+    }
+    print "\n";
+  }
 
   return $fitness[0];
 }
