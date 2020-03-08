@@ -83,10 +83,11 @@ sub image {
   $im->Set(magick=>'PNG32');
   $im->Read('canvas:white');
 
-  my @objects = ( @{$args->{objects}} );
-
-  for (@objects) {
+  for ( @{$args->{objects}} ) {
     my ($x, $y, $yr, $r, $g, $b) = @{$_};
+    unless (defined $b) {
+      say "foobar";
+    }
     $im->Draw(fill=>"rgb($r,$g,$b)", primitive=>'circle', points=>"$x,$y $x,$yr");
   }
 

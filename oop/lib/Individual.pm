@@ -16,6 +16,7 @@ use parent 'Storable';
 # --------------------------------------------------
 # CLASS VARIABLES
 #
+use constant PI => 4 * atan2(1, 1);
 my $init_num_objects = 20;   # initial number of geometric objects
 my $max_num_objects  = 2000; # maximum number of geometric objects
 my $strategist       = undef;
@@ -159,7 +160,7 @@ sub mate {
 sub mutate {
   my $self = shift;
 
-  my $no_of_mutations = 2;
+  my $no_of_mutations = 6;
   my $mutation_type = shift // int rand $no_of_mutations;
   die "Invalid mutation type\n" if ($mutation_type > $no_of_mutations);
 
@@ -169,6 +170,8 @@ sub mutate {
   elsif ($mutation_type == 1) { $mutant = $self->insert_mutation()  }
   elsif ($mutation_type == 2) { $mutant = $self->shrink_mutation()  }
   elsif ($mutation_type == 3) { $mutant = $self->replace_mutation() }
+  elsif ($mutation_type == 4) { $mutant = $self->color_mutation()   }
+  elsif ($mutation_type == 5) { $mutant = $self->sideways_mutation()}
   else { die "Invalid option\n" }
 
 
@@ -222,7 +225,44 @@ sub replace_mutation {
   $mutant->previous_operation(3);
   return $mutant;
 }
+sub color_mutation {
+  my $self = shift;
+  my @objects = @{ $self->objects() };
+  my $pos = int rand scalar @objects;
+  my @obj = flatten($objects[$pos]);
 
+  my ($r, $g, $b) = map {$_ + int(rand(20))} flatten(@obj[3 .. 5]);
+  my @newobj = ( flatten(@obj[0 .. 2]), $r, $b, $g);
+
+  splice(@objects, $pos, 1, \@newobj);
+
+  my $mutant = Individual->new( { objects => [ @objects ]} );
+  $mutant->previous_operation(4);
+  return $mutant;
+}
+sub sideways_mutation {
+  my $self = shift;
+  my @objects = @{ $self->objects() };
+  my $pos = int rand scalar @objects;
+  my @obj = flatten($objects[$pos]);
+
+  # get original circle
+  my ($x, $y, $radius) = flatten( @obj[0 .. 2] );
+
+  # new X and Y values placed on the perimeter of the original circle,
+  # with a radius slightly smaller.
+  my $rads = deg2rad(30);
+  my $nx = int ($x + ($radius * cos ($rads * rand 12)));
+  my $ny = int ($y + ($radius * sin ($rads * rand 12)));
+  my $nyr = $ny + int($radius/1.3);
+  my @newobj = ($nx, $ny, $nyr, flatten(@obj[3 .. 5]));
+
+  splice(@objects, $pos, 0, \@newobj);
+
+  my $mutant = Individual->new( { objects => [ @objects ]} );
+  $mutant->previous_operation(5);
+  return $mutant;
+}
 
 sub save_to_disk {
   my $self = shift;
@@ -267,7 +307,7 @@ sub load_from_disk {
   die "No 'object' arrayref exists in '$name'.\n"
     unless ref $data->{objects} eq 'ARRAY';
 
-  my $stringified = join '', $self->flatten($data->{objects});
+  my $stringified = join '', flatten($data->{objects});
   die "There are non-digits in the allele array.\n"
     if $stringified =~ /\D/;
 
@@ -285,9 +325,12 @@ sub to_string {
 }
 
 sub flatten {
-  my $self = shift;
-  map { ref $_ ? $self->flatten(@{$_}) : $_ } @_;
+  map { ref $_ ? flatten(@{$_}) : $_ } @_;
 }
+sub deg2rad {
+  $_[0] * PI / 180;
+}
+
 
 
 1;
