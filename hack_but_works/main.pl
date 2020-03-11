@@ -174,7 +174,7 @@ my $ui_radius = $strategy;
 my $population = &generate_genes($seed_file); # if undef, starts from scratch.
 
 # Giving the main loop a sense of history
-my $prev_best_distance = &best_distance;
+my $prev_best_distance = &best_distance();
 my $prev_best_image;
 my @distance_history = qw/1/;
 my $inner_cnt = 0;

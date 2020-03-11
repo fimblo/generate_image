@@ -48,7 +48,7 @@ my $WIDTHXHEIGHT = $WIDTH . 'x' . $HEIGHT;
 my $MAX_RADIUS = 100;
 my $MIN_RADIUS = 4;
 
-my $BEST_DISTANCE = undef;
+my $BEST_DISTANCE = 1;
 
 # --------------------------------------------------
 # Subs
