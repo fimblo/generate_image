@@ -18,7 +18,6 @@ my $radii = { 3 => [200, 400],
             };
 my $radius_strategy_limit = 4;
 my $name_map = {0=>'Medium', 1=>'Small', 2=>'Tiny', 3=>'Giant', 4=>'Large'};
-
 my $DISTANCE_DIFF_THRESHOLD = { 3 => 0.001,
                                 4 => 0.0001,
                                 0 => 0.00001,
@@ -36,7 +35,7 @@ sub new {
   my $args = shift;
 
   my $self = {
-              strategy => 3, # default to large circles
+              strategy => 3, # default to Giant circles
               distance_history => [ 1 ],
              };
   bless $self, $class;

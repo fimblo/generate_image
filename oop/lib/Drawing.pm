@@ -51,7 +51,6 @@ sub new {
 
 # --------------------------------------------------
 # INSTANCE METHODS
-
 sub fitness {
   my $self = shift;
   return $self->{fitness} if exists $self->{fitness};
