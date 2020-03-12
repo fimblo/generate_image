@@ -36,10 +36,10 @@ $population->generate_individuals();
 # --------------------------------------------------
 # Repeat the below until the population has an individual which is
 # "good enough"
-my ($i, $prev_best, $curr_best) = (1,1,1);
+my ($i, $prev_best_fitness, $curr_best_fitess) = (1,1,1);
 my $status_update = &setup_status_update();
 
-while ($curr_best > 0.01) {
+while ($curr_best_fitess > 0.01) {
 
   # --------------------------------------------------
   # Create images which reflect the individuals
@@ -57,14 +57,14 @@ while ($curr_best > 0.01) {
 
   # --------------------------------------------------
   # Update the user with status
-  $curr_best = &$status_update($retval);
+  $curr_best_fitess = &$status_update($retval);
 
   # --------------------------------------------------
   # Save the current state to disk
-  if ($curr_best < $prev_best) {
+  if ($curr_best_fitess < $prev_best_fitness) {
     $best_indivs[0]->save_to_disk( { serial => sprintf("%06d", $i),
                                      project => $project_name } );
-    $prev_best = $curr_best;
+    $prev_best_fitness = $curr_best_fitess;
   }
 
   $i++;
