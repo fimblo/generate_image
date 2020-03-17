@@ -69,7 +69,7 @@ sub inform {
 
   my @distance_history = @{$self->{distance_history}};
   push @distance_history, $d;
-  shift @distance_history if (@distance_history > 5);
+  shift @distance_history if (@distance_history > 15);
   $self->{distance_history} = \@distance_history;
 
   my $sum = 0; $sum += $_ for @distance_history;

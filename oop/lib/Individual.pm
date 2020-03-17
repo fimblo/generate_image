@@ -81,11 +81,12 @@ sub generate_object {
   my $class = shift;
   my ($w, $h) = ($wxh->{width}, $wxh->{height});
   my ($rmin, $rmax) = @{ Individual->strategist()->get_radii_range() };
-  my $radius = $rmin + int(rand( $rmax - $rmin));
+
+
 
   return [ int rand $w,
            int rand $h,
-           int rand $h + $radius,
+           $h + $rmin + int(rand( $rmax - $rmin)),
            int rand 256,
            int rand 256,
            int rand 256 ];
@@ -148,7 +149,7 @@ sub mate {
 
   # Limit size if it's larger than max_num_objects
   my @objects = (@first, @last);
-  if (scalar(@first) + scalar (@last) > Individual->max_num_objects()) {
+  if (scalar(@objects) > Individual->max_num_objects()) {
     splice @objects, Individual->max_num_objects();
   }
   my $child = Individual->new({ objects => [ @objects ]});
@@ -160,18 +161,18 @@ sub mate {
 sub mutate {
   my $self = shift;
 
-  my $no_of_mutations = 6;
+  my $no_of_mutations = 100;
   my $mutation_type = shift // int rand $no_of_mutations;
   die "Invalid mutation type\n" if ($mutation_type > $no_of_mutations);
 
 
   my $mutant;
-  if    ($mutation_type == 0) { $mutant = $self->grow_mutation()    }
-  elsif ($mutation_type == 1) { $mutant = $self->insert_mutation()  }
-  elsif ($mutation_type == 2) { $mutant = $self->shrink_mutation()  }
-  elsif ($mutation_type == 3) { $mutant = $self->replace_mutation() }
-  elsif ($mutation_type == 4) { $mutant = $self->color_mutation()   }
-  elsif ($mutation_type == 5) { $mutant = $self->sideways_mutation()}
+  if    ($mutation_type < 30)  { $mutant = $self->grow_mutation()    }
+  elsif ($mutation_type < 60)  { $mutant = $self->insert_mutation()  }
+  elsif ($mutation_type < 65)  { $mutant = $self->shrink_mutation()  }
+  elsif ($mutation_type < 75)  { $mutant = $self->replace_mutation() }
+  elsif ($mutation_type < 85)  { $mutant = $self->color_mutation()   }
+  elsif ($mutation_type < 100) { $mutant = $self->sideways_mutation()}
   else { die "Invalid option\n" }
 
 
