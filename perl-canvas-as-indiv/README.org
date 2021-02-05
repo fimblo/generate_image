@@ -1,0 +1,7 @@
+* A new take
+
+In previous versions, the individual consisted of genes, which was actualized as an image. The image was compared with other images to see which individuals were better.
+
+This time I'll try making the individuals and genes the actual canvas - the image itself. This way there won't be any "dead dna", where a shape was painted over another shape - making the proportion of useless genes go down to zero.
+
+Of course, I've understood that these dead dna actually hold value in that they hold hidden variability - something I'll lose by testing this path (if this holds true)
