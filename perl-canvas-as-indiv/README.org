@@ -5,3 +5,18 @@ In previous versions, the individual consisted of genes, which was actualized as
 This time I'll try making the individuals and genes the actual canvas - the image itself. This way there won't be any "dead dna", where a shape was painted over another shape - making the proportion of useless genes go down to zero.
 
 Of course, I've understood that these dead dna actually hold value in that they hold hidden variability - something I'll lose by testing this path (if this holds true)
+
+Some envisioned advantages to this approach:
+- Comparing two individuals won't require creating images, making the whole program work faster
+- The size of an individual won't change over time - if the image is 256x256 pixels, then the total size will never change from 256x256x3 (196,608 cells)
+
+Another thing I want to test:
+Assuming that the above does indeed make the creation and comparison of generations go faster, I'll be able to have larger populations which in turn means that there would be a larger gene pool. I'm hoping I'll have some competing families of individuals - some which never make it to first place but which aren't removed as quickly as in previous trials.
+
+
+* Todo [0/5]
+- [ ] Code which converts an image to a matrix with coloured pixels
+- [ ] Code which converts a matrix into an image
+- [ ] Code which produces a scalar which describes the distance between two matrices
+- [ ] Code which mates two matrices
+- [ ] Code which mutates a matrix
